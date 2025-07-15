@@ -609,7 +609,7 @@ const SidebarComponent = ({ isCollapsed, onToggle, onSearchClick }: SidebarProps
                         aria-label={`User: ${getUserDisplayName()}`}
                         onKeyDown={e =>
                             handleKeyDown(e, () => {
-                                if (isFirebaseUser) {
+                                if (userInfo && userInfo.uid !== 'default_user') {
                                     router.push('/settings');
                                 } else {
                                     router.push('/login');
