@@ -250,4 +250,5 @@ export default function ActivityPage() {
         )}
       </div>
     </DashboardLayout>
-  ); 
+  );
+} 
