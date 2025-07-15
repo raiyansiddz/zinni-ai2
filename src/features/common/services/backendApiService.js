@@ -1,9 +1,11 @@
 const fetch = require('node-fetch');
 const neonAuthService = require('./neonAuthService');
+const config = require('../../config/environment');
 
 class BackendApiService {
     constructor() {
-        this.baseUrl = 'http://localhost:8002';
+        this.baseUrl = config.BACKEND_URL;
+        console.log('[BackendApiService] Service initialized with base URL:', this.baseUrl);
     }
 
     async makeRequest(endpoint, options = {}) {
