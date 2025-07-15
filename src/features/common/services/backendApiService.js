@@ -1,53 +1,67 @@
-const fetch = require('node-fetch');
+const axios = require('axios');
 const neonAuthService = require('./neonAuthService');
 const config = require('../../config/environment');
 
 class BackendApiService {
     constructor() {
         this.baseUrl = config.BACKEND_URL;
+        
+        // Create axios instance with base configuration
+        this.axiosInstance = axios.create({
+            baseURL: this.baseUrl,
+            timeout: 30000,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        // Add request interceptor to inject auth token
+        this.axiosInstance.interceptors.request.use((config) => {
+            const token = neonAuthService.getAuthToken();
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+            return config;
+        });
+        
+        // Add response interceptor to handle auth errors
+        this.axiosInstance.interceptors.response.use(
+            (response) => response,
+            (error) => {
+                if (error.response?.status === 401) {
+                    // Token expired, clear session
+                    neonAuthService.clearSession();
+                    neonAuthService.broadcastUserState();
+                }
+                return Promise.reject(error);
+            }
+        );
+        
         console.log('[BackendApiService] Service initialized with base URL:', this.baseUrl);
     }
 
     async makeRequest(endpoint, options = {}) {
-        const token = neonAuthService.getAuthToken();
-        
-        const defaultOptions = {
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        };
-
-        // Add authorization header if token exists
-        if (token) {
-            defaultOptions.headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        const finalOptions = {
-            ...defaultOptions,
-            ...options,
-            headers: {
-                ...defaultOptions.headers,
-                ...(options.headers || {})
-            }
-        };
-
         try {
-            const response = await fetch(`${this.baseUrl}${endpoint}`, finalOptions);
-            
-            if (!response.ok) {
-                if (response.status === 401) {
-                    // Token expired, clear session
-                    neonAuthService.clearSession();
-                    neonAuthService.broadcastUserState();
-                    throw new Error('Authentication expired');
-                }
-                throw new Error(`Request failed: ${response.status}`);
-            }
-
-            return response.json();
+            const response = await this.axiosInstance.request({
+                url: endpoint,
+                ...options
+            });
+            return response.data;
         } catch (error) {
-            console.error(`[BackendApiService] Request to ${endpoint} failed:`, error);
-            throw error;
+            console.error(`[BackendApiService] Request to ${endpoint} failed:`, error.message);
+            
+            // Handle specific error types
+            if (error.response) {
+                // Server responded with error status
+                const errorMessage = error.response.data?.message || error.response.data?.error || `Request failed: ${error.response.status}`;
+                throw new Error(errorMessage);
+            } else if (error.request) {
+                // No response received
+                throw new Error('No response from server. Please check your connection.');
+            } else {
+                // Other error
+                throw new Error(error.message || 'Unknown error occurred');
+            }
         }
     }
 
