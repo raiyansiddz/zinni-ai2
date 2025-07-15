@@ -7,6 +7,12 @@
 
 require('dotenv').config();
 
+// Add sandbox configuration for root user
+if (process.getuid && process.getuid() === 0) {
+    app.commandLine.appendSwitch('--no-sandbox');
+    app.commandLine.appendSwitch('--disable-setuid-sandbox');
+}
+
 if (require('electron-squirrel-startup')) {
     process.exit(0);
 }
