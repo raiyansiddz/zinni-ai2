@@ -205,26 +205,26 @@ class BackendTester:
         except Exception as e:
             self.log_test("Auth Status (No Token)", False, f"Exception: {str(e)}")
         
-        # Test auth verify (should return 401 without token)
+        # Test auth verify (should return 403 without token - FastAPI HTTPBearer behavior)
         try:
             response = self.make_request("POST", "/api/auth/verify")
             
-            if response.status_code == 401:
-                self.log_test("Auth Verify (No Token)", True, "Correctly returned 401 for missing token")
+            if response.status_code == 403:
+                self.log_test("Auth Verify (No Token)", True, "Correctly returned 403 for missing token")
             else:
-                self.log_test("Auth Verify (No Token)", False, f"Expected 401, got {response.status_code}", response.text)
+                self.log_test("Auth Verify (No Token)", False, f"Expected 403, got {response.status_code}", response.text)
                 
         except Exception as e:
             self.log_test("Auth Verify (No Token)", False, f"Exception: {str(e)}")
         
-        # Test auth me (should return 401 without token)
+        # Test auth me (should return 403 without token - FastAPI HTTPBearer behavior)
         try:
             response = self.make_request("GET", "/api/auth/me")
             
-            if response.status_code == 401:
-                self.log_test("Auth Me (No Token)", True, "Correctly returned 401 for missing token")
+            if response.status_code == 403:
+                self.log_test("Auth Me (No Token)", True, "Correctly returned 403 for missing token")
             else:
-                self.log_test("Auth Me (No Token)", False, f"Expected 401, got {response.status_code}", response.text)
+                self.log_test("Auth Me (No Token)", False, f"Expected 403, got {response.status_code}", response.text)
                 
         except Exception as e:
             self.log_test("Auth Me (No Token)", False, f"Exception: {str(e)}")
