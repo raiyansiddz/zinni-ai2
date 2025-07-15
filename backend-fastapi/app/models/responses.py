@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from enum import Enum
+import json
 
 class UserResponse(BaseModel):
     id: str
@@ -31,6 +32,30 @@ class PlanResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
+    @classmethod
+    def model_validate(cls, obj):
+        """Custom validation to handle UUID and JSON fields"""
+        if hasattr(obj, '__dict__'):
+            data = obj.__dict__.copy()
+            
+            # Convert UUID to string
+            if 'id' in data:
+                data['id'] = str(data['id'])
+            
+            # Parse JSON features
+            if 'features' in data and isinstance(data['features'], str):
+                try:
+                    data['features'] = json.loads(data['features'])
+                except:
+                    data['features'] = None
+            
+            # Convert enum to string
+            if 'plan_type' in data and hasattr(data['plan_type'], 'value'):
+                data['plan_type'] = data['plan_type'].value
+            
+            return cls(**data)
+        return super().model_validate(obj)
+    
     class Config:
         from_attributes = True
 
@@ -44,6 +69,24 @@ class SessionResponse(BaseModel):
     ended_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    
+    @classmethod
+    def model_validate(cls, obj):
+        """Custom validation to handle UUID fields"""
+        if hasattr(obj, '__dict__'):
+            data = obj.__dict__.copy()
+            
+            # Convert UUIDs to strings
+            for field in ['id', 'user_id']:
+                if field in data:
+                    data[field] = str(data[field])
+            
+            # Convert enum to string
+            if 'session_type' in data and hasattr(data['session_type'], 'value'):
+                data['session_type'] = data['session_type'].value
+            
+            return cls(**data)
+        return super().model_validate(obj)
     
     class Config:
         from_attributes = True
@@ -60,6 +103,20 @@ class AiMessageResponse(BaseModel):
     model_used: str
     tokens_used: int
     created_at: datetime
+    
+    @classmethod
+    def model_validate(cls, obj):
+        """Custom validation to handle UUID fields"""
+        if hasattr(obj, '__dict__'):
+            data = obj.__dict__.copy()
+            
+            # Convert UUIDs to strings
+            for field in ['id', 'session_id', 'user_id']:
+                if field in data:
+                    data[field] = str(data[field])
+            
+            return cls(**data)
+        return super().model_validate(obj)
     
     class Config:
         from_attributes = True
