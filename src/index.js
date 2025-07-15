@@ -493,51 +493,19 @@ async function handleCustomUrl(url) {
     }
 }
 
-async function handleFirebaseAuthCallback(params) {
-    const userRepository = require('./features/common/repositories/user');
-    const { token: idToken } = params;
-
-    if (!idToken) {
-        console.error('[Auth] Firebase auth callback is missing ID token.');
-        // No need to send IPC, the UI won't transition without a successful auth state change.
-        return;
-    }
-
-    console.log('[Auth] Received ID token from deep link, exchanging for custom token...');
+async function handleNeonAuthCallback(params) {
+    console.log('[Auth] Handling Neon Auth callback with params:', params);
 
     try {
-        const functionUrl = 'https://us-west1-pickle-3651a.cloudfunctions.net/pickleGlassAuthCallback';
-        const response = await fetch(functionUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: idToken })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-            throw new Error(data.error || 'Failed to exchange token.');
+        const result = await neonAuthService.handleAuthCallback(params);
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Authentication failed');
         }
 
-        const { customToken, user } = data;
-        console.log('[Auth] Successfully received custom token for user:', user.uid);
+        console.log('[Auth] Authentication successful for user:', result.user.email);
 
-        const firebaseUser = {
-            uid: user.uid,
-            email: user.email || 'no-email@example.com',
-            displayName: user.name || 'User',
-            photoURL: user.picture
-        };
-
-        // 1. Sync user data to local DB
-        userRepository.findOrCreate(firebaseUser);
-        console.log('[Auth] User data synced with local DB.');
-
-        // 2. Sign in using the authService in the main process
-        await authService.signInWithCustomToken(customToken);
-        console.log('[Auth] Main process sign-in initiated. Waiting for onAuthStateChanged...');
-
-        // 3. Focus the app window
+        // Focus the app window
         const { windowPool } = require('./window/windowManager.js');
         const header = windowPool.get('header');
         if (header) {
@@ -548,9 +516,9 @@ async function handleFirebaseAuthCallback(params) {
         }
         
     } catch (error) {
-        console.error('[Auth] Error during custom token exchange or sign-in:', error);
-        // The UI will not change, and the user can try again.
-        // Optionally, send a generic error event to the renderer.
+        console.error('[Auth] Error during Neon Auth callback:', error);
+        
+        // Send error to renderer
         const { windowPool } = require('./window/windowManager.js');
         const header = windowPool.get('header');
         if (header) {
