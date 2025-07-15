@@ -7,11 +7,10 @@ import { searchConversations, Session } from '@/utils/api'
 import { MessageSquare } from 'lucide-react'
 
 interface SearchPopupProps {
-  isOpen: boolean
   onClose: () => void
 }
 
-export default function SearchPopup({ isOpen, onClose }: SearchPopupProps) {
+export default function SearchPopup({ onClose }: SearchPopupProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Session[]>([])
   const [isLoading, setIsLoading] = useState(false)
