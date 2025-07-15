@@ -1,8 +1,17 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { ChevronDown, Plus, Copy } from 'lucide-react'
-import { getPresets, updatePreset, createPreset, PromptPreset } from '@/utils/api'
+import { useState, useEffect } from 'react';
+import { Plus, Edit2, Trash2, BookOpen, Briefcase, GraduationCap, Users, Coffee, MessageSquare } from 'lucide-react';
+import DashboardLayout from '@/components/DashboardLayout';
+import { getPresets, createPreset, updatePreset, deletePreset } from '@/utils/api';
+
+interface Preset {
+  id: string;
+  title: string;
+  prompt: string;
+  is_default: number;
+  created_at: number;
+}
 
 export default function PersonalizePage() {
   const [allPresets, setAllPresets] = useState<PromptPreset[]>([]);
