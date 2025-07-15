@@ -91,10 +91,14 @@ class BackendTester:
         print("\n=== Testing Plan Management ===")
         
         try:
+            print(f"Making request to: {self.base_url}/api/plan/")
             response = self.make_request("GET", "/api/plan/")
+            print(f"Response status code: {response.status_code}")
+            print(f"Response headers: {dict(response.headers)}")
             
             if response.status_code == 200:
                 plans = response.json()
+                print(f"Response data: {plans}")
                 
                 # Check if we have 4 plans
                 if len(plans) == 4:
@@ -143,9 +147,13 @@ class BackendTester:
                     self.log_test("Plan Types", False, f"Missing plan types: {missing_plans}", found_plan_types)
                     
             else:
+                print(f"Response text: {response.text}")
                 self.log_test("Plans Endpoint", False, f"Status code: {response.status_code}", response.text)
                 
         except Exception as e:
+            print(f"Exception occurred: {str(e)}")
+            import traceback
+            traceback.print_exc()
             self.log_test("Plans Endpoint", False, f"Exception: {str(e)}")
 
     def test_ai_provider_endpoints(self):
