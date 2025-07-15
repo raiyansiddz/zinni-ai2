@@ -1,6 +1,7 @@
 const { BrowserWindow, shell } = require('electron');
 const fetch = require('node-fetch');
 const Store = require('electron-store');
+const config = require('../../config/environment');
 
 class NeonAuthService {
     constructor() {
@@ -8,19 +9,19 @@ class NeonAuthService {
         this.currentUser = null;
         this.authToken = null;
         this.isInitialized = false;
-        this.backendUrl = 'http://localhost:8002';
+        this.backendUrl = config.BACKEND_URL;
         
         // Store for persisting auth state
         this.store = new Store({ name: 'neon-auth-session' });
         
         // Neon Auth configuration
         this.config = {
-            projectId: '9474a952-de9c-424b-830f-c78480058e0b',
-            publishableKey: 'pck_8k4vap35ke0nnpn4pe6sa72axx1dwpsqp24w0246yr720',
-            authUrl: 'https://accounts.stack-auth.com/sign-in'
+            projectId: config.NEON_AUTH.PROJECT_ID,
+            publishableKey: config.NEON_AUTH.PUBLISHABLE_KEY,
+            authUrl: config.NEON_AUTH.AUTH_URL
         };
         
-        console.log('[NeonAuthService] Service initialized');
+        console.log('[NeonAuthService] Service initialized with backend URL:', this.backendUrl);
     }
 
     async initialize() {
