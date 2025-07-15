@@ -14,9 +14,8 @@ if (require('electron-squirrel-startup')) {
 const { app, BrowserWindow, shell, ipcMain, dialog, desktopCapturer, session } = require('electron');
 const { createWindows } = require('./window/windowManager.js');
 const listenService = require('./features/listen/listenService');
-const { initializeFirebase } = require('./features/common/services/firebaseClient');
+const neonAuthService = require('./features/common/services/neonAuthService');
 const databaseInitializer = require('./features/common/services/databaseInitializer');
-const authService = require('./features/common/services/authService');
 const path = require('node:path');
 const express = require('express');
 const fetch = require('node-fetch');
