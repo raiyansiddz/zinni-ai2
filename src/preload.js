@@ -14,8 +14,8 @@ contextBridge.exposeInMainWorld('api', {
   common: {
     // User & Auth
     getCurrentUser: () => ipcRenderer.invoke('get-current-user'),
-    startFirebaseAuth: () => ipcRenderer.invoke('start-firebase-auth'),
-    firebaseLogout: () => ipcRenderer.invoke('firebase-logout'),
+    startNeonAuth: () => ipcRenderer.invoke('start-neon-auth'),
+    neonLogout: () => ipcRenderer.invoke('neon-logout'),
     
     // App Control
       quitApplication: () => ipcRenderer.invoke('quit-application'),
