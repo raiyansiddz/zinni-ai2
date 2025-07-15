@@ -1,5 +1,5 @@
 const { BrowserWindow } = require('electron');
-const { createStreamingLLM } = require('../common/ai/factory');
+const backendApiService = require('../common/services/backendApiService');
 // Lazy require helper to avoid circular dependency issues
 const getWindowManager = () => require('../../window/windowManager');
 const internalBridge = require('../../bridge/internalBridge');
