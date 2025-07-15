@@ -49,9 +49,9 @@ module.exports = {
     });
 
     // User/Auth
-    ipcMain.handle('get-current-user', () => authService.getCurrentUser());
-    ipcMain.handle('start-firebase-auth', async () => await authService.startFirebaseAuthFlow());
-    ipcMain.handle('firebase-logout', async () => await authService.signOut());
+    ipcMain.handle('get-current-user', () => neonAuthService.getCurrentUser());
+    ipcMain.handle('start-neon-auth', async () => await neonAuthService.startAuthFlow());
+    ipcMain.handle('neon-logout', async () => await neonAuthService.signOut());
 
     // App
     ipcMain.handle('quit-application', () => app.quit());
