@@ -14,271 +14,284 @@ interface Preset {
 }
 
 export default function PersonalizePage() {
-  const [allPresets, setAllPresets] = useState<PromptPreset[]>([]);
-  const [selectedPreset, setSelectedPreset] = useState<PromptPreset | null>(null);
-  const [showPresets, setShowPresets] = useState(true);
-  const [editorContent, setEditorContent] = useState('');
+  const [presets, setPresets] = useState<Preset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingPreset, setEditingPreset] = useState<Preset | null>(null);
+  const [formData, setFormData] = useState({
+    title: '',
+    prompt: ''
+  });
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const presetsData = await getPresets();
-        setAllPresets(presetsData);
-        
-        if (presetsData.length > 0) {
-          const firstUserPreset = presetsData.find(p => p.is_default === 0) || presetsData[0];
-          setSelectedPreset(firstUserPreset);
-          setEditorContent(firstUserPreset.prompt);
-        }
-      } catch (error) {
-        console.error("Failed to fetch presets:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
+    loadPresets();
   }, []);
 
-  const handlePresetClick = (preset: PromptPreset) => {
-    if (isDirty && !window.confirm("You have unsaved changes. Are you sure you want to switch?")) {
-        return;
+  const loadPresets = async () => {
+    try {
+      const data = await getPresets();
+      setPresets(data);
+    } catch (error) {
+      console.error('Error loading presets:', error);
+    } finally {
+      setLoading(false);
     }
-    setSelectedPreset(preset);
-    setEditorContent(preset.prompt);
-    setIsDirty(false);
   };
 
-  const handleEditorChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setEditorContent(e.target.value);
-    setIsDirty(true);
+  const handleCreatePreset = () => {
+    setEditingPreset(null);
+    setFormData({ title: '', prompt: '' });
+    setShowModal(true);
+  };
+
+  const handleEditPreset = (preset: Preset) => {
+    setEditingPreset(preset);
+    setFormData({ title: preset.title, prompt: preset.prompt });
+    setShowModal(true);
+  };
+
+  const handleDeletePreset = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this preset?')) {
+      try {
+        await deletePreset(id);
+        setPresets(presets.filter(p => p.id !== id));
+      } catch (error) {
+        console.error('Error deleting preset:', error);
+      }
+    }
   };
 
   const handleSave = async () => {
-    if (!selectedPreset || saving || !isDirty) return;
-    
-    if (selectedPreset.is_default === 1) {
-        alert("Default presets cannot be modified.");
-        return;
-    }
-    
-    try {
-      setSaving(true);
-      await updatePreset(selectedPreset.id, { 
-        title: selectedPreset.title, 
-        prompt: editorContent 
-      });
+    if (!formData.title.trim() || !formData.prompt.trim()) return;
 
-      setAllPresets(prev => 
-        prev.map(p => 
-          p.id === selectedPreset.id 
-            ? { ...p, prompt: editorContent }
+    try {
+      if (editingPreset) {
+        await updatePreset(editingPreset.id, formData);
+        setPresets(presets.map(p => 
+          p.id === editingPreset.id 
+            ? { ...p, title: formData.title, prompt: formData.prompt }
             : p
-          )
-        );
-      setIsDirty(false);
+        ));
+      } else {
+        const newPreset = await createPreset(formData);
+        const presetData = {
+          id: newPreset.id,
+          title: formData.title,
+          prompt: formData.prompt,
+          is_default: 0,
+          created_at: Date.now()
+        };
+        setPresets([...presets, presetData]);
+      }
+      setShowModal(false);
+      setFormData({ title: '', prompt: '' });
     } catch (error) {
-      console.error("Save failed:", error);
-      alert("Failed to save preset. See console for details.");
-    } finally {
-      setSaving(false);
+      console.error('Error saving preset:', error);
     }
   };
 
-  const handleCreateNewPreset = async () => {
-    const title = prompt("Enter a title for the new preset:");
-    if (!title) return;
-    
-    try {
-      setSaving(true);
-      const { id } = await createPreset({
-        title,
-        prompt: "Enter your custom prompt here..."
-      });
-      
-      const newPreset: PromptPreset = {
-        id,
-        uid: 'current_user',
-        title,
-        prompt: "Enter your custom prompt here...",
-        is_default: 0,
-        created_at: Date.now(),
-        sync_state: 'clean'
-      };
-      
-      setAllPresets(prev => [...prev, newPreset]);
-      setSelectedPreset(newPreset);
-      setEditorContent(newPreset.prompt);
-      setIsDirty(false);
-    } catch (error) {
-      console.error("Failed to create preset:", error);
-      alert("Failed to create preset. See console for details.");
-    } finally {
-      setSaving(false);
+  const getPresetIcon = (title: string) => {
+    const lowercaseTitle = title.toLowerCase();
+    if (lowercaseTitle.includes('school') || lowercaseTitle.includes('education')) {
+      return GraduationCap;
+    } else if (lowercaseTitle.includes('meeting') || lowercaseTitle.includes('business')) {
+      return Briefcase;
+    } else if (lowercaseTitle.includes('sales') || lowercaseTitle.includes('customer')) {
+      return Users;
+    } else if (lowercaseTitle.includes('casual') || lowercaseTitle.includes('personal')) {
+      return Coffee;
+    } else {
+      return MessageSquare;
     }
   };
 
-  const handleDuplicatePreset = async () => {
-    if (!selectedPreset) return;
-    
-    const title = prompt("Enter a title for the duplicated preset:", `${selectedPreset.title} (Copy)`);
-    if (!title) return;
-    
-    try {
-      setSaving(true);
-      const { id } = await createPreset({
-        title,
-        prompt: editorContent
-      });
-      
-      const newPreset: PromptPreset = {
-        id,
-        uid: 'current_user',
-        title,
-        prompt: editorContent,
-        is_default: 0,
-        created_at: Date.now(),
-        sync_state: 'clean'
-      };
-      
-      setAllPresets(prev => [...prev, newPreset]);
-      setSelectedPreset(newPreset);
-      setIsDirty(false);
-    } catch (error) {
-      console.error("Failed to duplicate preset:", error);
-      alert("Failed to duplicate preset. See console for details.");
-    } finally {
-      setSaving(false);
+  const defaultPresets = [
+    {
+      id: 'school',
+      title: 'School',
+      prompt: 'You are an educational assistant. Help me with my studies, explain concepts clearly, and provide learning resources.',
+      icon: GraduationCap,
+      color: 'bg-blue-100 text-blue-600'
+    },
+    {
+      id: 'meeting',
+      title: 'Meeting',
+      prompt: 'You are a professional meeting assistant. Help me prepare for meetings, take notes, and follow up on action items.',
+      icon: Briefcase,
+      color: 'bg-green-100 text-green-600'
+    },
+    {
+      id: 'sales',
+      title: 'Sales',
+      prompt: 'You are a sales assistant. Help me with client interactions, proposal writing, and sales strategy.',
+      icon: Users,
+      color: 'bg-purple-100 text-purple-600'
+    },
+    {
+      id: 'casual',
+      title: 'Casual',
+      prompt: 'You are a friendly conversational assistant. Keep responses casual, helpful, and engaging.',
+      icon: Coffee,
+      color: 'bg-orange-100 text-orange-600'
     }
-  };
+  ];
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-gray-500">Loading...</div>
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading presets...</p>
+          </div>
+        </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="bg-white border-b border-gray-100">
-        <div className="px-8 pt-8 pb-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm text-gray-500 mb-2">Presets</p>
-              <h1 className="text-3xl font-bold text-gray-900">Personalize</h1>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleCreateNewPreset}
-                disabled={saving}
-                className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                New Preset
-              </button>
-              {selectedPreset && (
-                <button
-                  onClick={handleDuplicatePreset}
-                  disabled={saving}
-                  className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  <Copy className="h-4 w-4" />
-                  Duplicate
-                </button>
-              )}
-              <button
-                onClick={handleSave}
-                disabled={saving || !isDirty || selectedPreset?.is_default === 1}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  !isDirty && !saving
-                    ? 'bg-gray-500 text-white cursor-default'
-                    : saving 
-                      ? 'bg-gray-400 text-white cursor-not-allowed' 
-                      : 'bg-gray-600 text-white hover:bg-gray-700'
-                }`}
-              >
-                {!isDirty && !saving ? 'Saved' : saving ? 'Saving...' : 'Save'}
-              </button>
-            </div>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Personalize</h1>
+            <p className="text-gray-600">Create context presets for different scenarios</p>
+          </div>
+          <button
+            onClick={handleCreatePreset}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Preset</span>
+          </button>
+        </div>
+
+        {/* Default Presets */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Start Presets</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {defaultPresets.map((preset) => (
+              <div key={preset.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer">
+                <div className={`w-10 h-10 rounded-lg ${preset.color} flex items-center justify-center mb-3`}>
+                  <preset.icon className="h-5 w-5" />
+                </div>
+                <h3 className="font-medium text-gray-900 mb-2">{preset.title}</h3>
+                <p className="text-sm text-gray-600 line-clamp-2">{preset.prompt}</p>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
 
-      <div className={`transition-colors duration-300 ${showPresets ? 'bg-gray-50' : 'bg-white'}`}>
-        <div className="px-8 py-6">
-          <div className="mb-6">
-            <button
-              onClick={() => setShowPresets(!showPresets)}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors"
-            >
-              <ChevronDown 
-                className={`h-4 w-4 transition-transform duration-200 ${showPresets ? 'rotate-180' : ''}`}
-              />
-              {showPresets ? 'Hide Presets' : 'Show Presets'}
-            </button>
-          </div>
+        {/* Custom Presets */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Custom Presets</h2>
           
-          {showPresets && (
-            <div className="grid grid-cols-5 gap-4 mb-6">
-              {allPresets.map((preset) => (
-                <div
-                  key={preset.id}
-                  onClick={() => handlePresetClick(preset)}
-                  className={`
-                    p-4 rounded-lg cursor-pointer transition-all duration-200 bg-white
-                    h-48 flex flex-col shadow-sm hover:shadow-md relative
-                    ${selectedPreset?.id === preset.id
-                      ? 'border-2 border-blue-500 shadow-md'
-                      : 'border border-gray-200 hover:border-gray-300'
-                    }
-                  `}
-                >
-                  {preset.is_default === 1 && (
-                    <div className="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
-                      Default
+          {presets.length === 0 ? (
+            <div className="text-center py-12">
+              <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No custom presets yet</h3>
+              <p className="text-gray-600 mb-4">
+                Create your first preset to customize the AI for specific contexts
+              </p>
+              <button
+                onClick={handleCreatePreset}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Create Preset
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {presets.map((preset) => {
+                const IconComponent = getPresetIcon(preset.title);
+                return (
+                  <div key={preset.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                        <IconComponent className="h-5 w-5 text-gray-600" />
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => handleEditPreset(preset)}
+                          className="p-1 rounded text-gray-400 hover:text-gray-600"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeletePreset(preset.id)}
+                          className="p-1 rounded text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
-                  )}
-                  <h3 className="font-semibold text-gray-900 mb-3 text-center text-sm">
-                    {preset.title}
-                  </h3>
-                  <p className="text-xs text-gray-600 leading-relaxed flex-1 overflow-hidden">
-                    {preset.prompt.substring(0, 100) + (preset.prompt.length > 100 ? '...' : '')}
-                  </p>
-                </div>
-              ))}
+                    <h3 className="font-medium text-gray-900 mb-2">{preset.title}</h3>
+                    <p className="text-sm text-gray-600 line-clamp-3">{preset.prompt}</p>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
-      </div>
 
-      <div className="flex-1 bg-white">
-        <div className="h-full px-8 py-6 flex flex-col">
-          {selectedPreset?.is_default === 1 && (
-            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-yellow-400 rounded-full"></div>
-                <p className="text-sm text-yellow-800">
-                  <strong>This is a default preset and cannot be edited.</strong> 
-                  Use the "Duplicate" button above to create an editable copy, or create a new preset.
-                </p>
+        {/* Modal */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl max-w-md w-full mx-4">
+              <div className="p-6 border-b">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {editingPreset ? 'Edit Preset' : 'Create New Preset'}
+                </h2>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter preset title"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Prompt
+                  </label>
+                  <textarea
+                    value={formData.prompt}
+                    onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows={4}
+                    placeholder="Enter the prompt that will guide the AI's behavior"
+                  />
+                </div>
+              </div>
+              
+              <div className="p-6 border-t flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!formData.title.trim() || !formData.prompt.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {editingPreset ? 'Update' : 'Create'}
+                </button>
               </div>
             </div>
-          )}
-          <textarea
-            value={editorContent}
-            onChange={handleEditorChange}
-            className="w-full flex-1 text-sm text-gray-900 border-0 resize-none focus:outline-none bg-transparent font-mono leading-relaxed"
-            placeholder="Select a preset or type directly..."
-            readOnly={selectedPreset?.is_default === 1}
-          />
-        </div>
+          </div>
+        )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 } 
