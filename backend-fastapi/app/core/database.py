@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, String, DateTime, Boolean, Text, Integer, Enum, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from typing import AsyncGenerator
 import uuid
@@ -56,7 +55,7 @@ class UserRole(str, enum.Enum):
 class User(Base):
     __tablename__ = "users"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     neon_user_id = Column(String, unique=True, nullable=False, index=True)
     email = Column(String, unique=True, nullable=False, index=True)
     display_name = Column(String, nullable=True)
@@ -71,7 +70,7 @@ class User(Base):
 class Plan(Base):
     __tablename__ = "plans"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False)
     plan_type = Column(Enum(PlanType), nullable=False, unique=True)
     price_monthly = Column(Integer, nullable=False)  # Price in cents
@@ -88,8 +87,8 @@ class Plan(Base):
 class Session(Base):
     __tablename__ = "sessions"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
     session_type = Column(Enum(SessionType), nullable=False)
     title = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
@@ -101,9 +100,9 @@ class Session(Base):
 class AiMessage(Base):
     __tablename__ = "ai_messages"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
     prompt = Column(Text, nullable=False)
     response = Column(Text, nullable=False)
     screen_context = Column(Text, nullable=True)  # Base64 encoded screen capture
@@ -116,8 +115,8 @@ class AiMessage(Base):
 class UsageTracking(Base):
     __tablename__ = "usage_tracking"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
     action_type = Column(String, nullable=False)  # ask, session_start, etc.
     resource_used = Column(String, nullable=True)  # tokens, api_calls, etc.
     quantity = Column(Integer, default=1)
@@ -128,10 +127,10 @@ class UsageTracking(Base):
 class ApiKey(Base):
     __tablename__ = "api_keys"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     provider = Column(String, nullable=False)  # openai, gemini, claude
     encrypted_key = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
-    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by = Column(String, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
