@@ -82,16 +82,19 @@ class BackendApiService {
     async sendAskRequest(prompt, screenContext = null, audioTranscript = null) {
         return this.makeRequest('/api/ask/', {
             method: 'POST',
-            body: JSON.stringify({
+            data: {
                 prompt,
                 screen_context: screenContext,
                 audio_transcript: audioTranscript
-            })
+            }
         });
     }
 
     async getAskMessages(sessionId) {
-        return this.makeRequest(`/api/ask/messages?session_id=${sessionId}`, { method: 'GET' });
+        return this.makeRequest(`/api/ask/messages`, { 
+            method: 'GET',
+            params: { session_id: sessionId }
+        });
     }
 
     async getAiProviders() {
@@ -115,11 +118,11 @@ class BackendApiService {
     async trackUsage(actionType, resourceUsed = null, quantity = 1) {
         return this.makeRequest('/api/track/', {
             method: 'POST',
-            body: JSON.stringify({
+            data: {
                 action_type: actionType,
                 resource_used: resourceUsed,
                 quantity
-            })
+            }
         });
     }
 
@@ -128,7 +131,10 @@ class BackendApiService {
     }
 
     async getSessionUsage(sessionId) {
-        return this.makeRequest(`/api/track/session?session_id=${sessionId}`, { method: 'GET' });
+        return this.makeRequest(`/api/track/session`, { 
+            method: 'GET',
+            params: { session_id: sessionId }
+        });
     }
 
     // User profile
@@ -139,7 +145,7 @@ class BackendApiService {
     async updateUserProfile(profileData) {
         return this.makeRequest('/api/user/profile', {
             method: 'PUT',
-            body: JSON.stringify(profileData)
+            data: profileData
         });
     }
 
@@ -151,10 +157,10 @@ class BackendApiService {
     async createCheckoutSession(priceId, billingCycle = 'monthly') {
         return this.makeRequest('/api/checkout/create-session', {
             method: 'POST',
-            body: JSON.stringify({
+            data: {
                 price_id: priceId,
                 billing_cycle: billingCycle
-            })
+            }
         });
     }
 }
