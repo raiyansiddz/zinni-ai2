@@ -375,7 +375,7 @@ const SidebarComponent = ({ isCollapsed, onToggle, onSearchClick }: SidebarProps
                                     </li>
                                 ))}
                                 <li role="none">
-                                    {isFirebaseUser ? (
+                                    {userInfo && userInfo.uid !== 'default_user' ? (
                                         <button
                                             onClick={handleLogout}
                                             onKeyDown={e => handleKeyDown(e, handleLogout)}
