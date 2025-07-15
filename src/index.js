@@ -182,16 +182,15 @@ app.whenReady().then(async () => {
     });
 
     // Initialize core services
-    initializeFirebase();
+    console.log('[index.js] Initializing Neon Auth...');
+    await neonAuthService.initialize();
     
     try {
         await databaseInitializer.initialize();
         console.log('>>> [index.js] Database initialized successfully');
         
-        // Clean up zombie sessions from previous runs first - MOVED TO authService
-        // sessionRepository.endAllActiveSessions();
-
-        await authService.initialize();
+        // Clean up zombie sessions from previous runs first
+        await sessionRepository.endAllActiveSessions();
 
         //////// after_modelStateService ////////
         await modelStateService.initialize();
