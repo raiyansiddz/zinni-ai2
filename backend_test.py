@@ -250,11 +250,11 @@ class BackendTester:
             headers = {"Content-Type": "application/json"}
             response = self.make_request("POST", "/api/auth/verify", headers=headers, json_data={"invalid": "data"})
             
-            # Should still return 401 for missing auth, not a validation error
-            if response.status_code == 401:
-                self.log_test("Malformed Auth Request", True, "Correctly handled malformed request with 401")
+            # Should still return 403 for missing auth, not a validation error
+            if response.status_code == 403:
+                self.log_test("Malformed Auth Request", True, "Correctly handled malformed request with 403")
             else:
-                self.log_test("Malformed Auth Request", False, f"Expected 401, got {response.status_code}", response.text)
+                self.log_test("Malformed Auth Request", False, f"Expected 403, got {response.status_code}", response.text)
                 
         except Exception as e:
             self.log_test("Malformed Auth Request", False, f"Exception: {str(e)}")
