@@ -470,7 +470,7 @@ async function handleCustomUrl(url) {
         switch (action) {
             case 'login':
             case 'auth-success':
-                await handleFirebaseAuthCallback(params);
+                await handleNeonAuthCallback(params);
                 break;
             case 'personalize':
                 handlePersonalizeFromUrl(params);
