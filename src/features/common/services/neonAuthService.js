@@ -8,6 +8,7 @@ class NeonAuthService {
         this.currentUser = null;
         this.authToken = null;
         this.isInitialized = false;
+        this.backendUrl = 'http://localhost:8002';
         
         // Store for persisting auth state
         this.store = new Store({ name: 'neon-auth-session' });
@@ -16,7 +17,7 @@ class NeonAuthService {
         this.config = {
             projectId: '9474a952-de9c-424b-830f-c78480058e0b',
             publishableKey: 'pck_8k4vap35ke0nnpn4pe6sa72axx1dwpsqp24w0246yr720',
-            authUrl: 'https://neon-auth.com/auth'
+            authUrl: 'https://accounts.stack-auth.com/sign-in'
         };
         
         console.log('[NeonAuthService] Service initialized');
@@ -73,55 +74,89 @@ class NeonAuthService {
 
     async handleAuthCallback(params) {
         try {
-            const { code } = params;
+            const { token, access_token, code } = params;
             
-            if (!code) {
-                throw new Error('Authorization code not received');
+            // Handle direct token or code
+            let finalToken = token || access_token;
+            
+            if (code && !finalToken) {
+                console.log('[NeonAuthService] Exchanging authorization code for token');
+                
+                // Exchange code for access token
+                const tokenResponse = await fetch('https://api.stack-auth.com/api/v1/auth/tokens/exchange', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        project_id: this.config.projectId,
+                        publishable_client_key: this.config.publishableKey,
+                        code: code,
+                        redirect_uri: 'pickleglass://auth-success'
+                    })
+                });
+
+                const tokenData = await tokenResponse.json();
+                
+                if (!tokenResponse.ok) {
+                    throw new Error(tokenData.error || 'Token exchange failed');
+                }
+
+                finalToken = tokenData.access_token;
+            }
+            
+            if (!finalToken) {
+                throw new Error('No token received from authentication');
             }
 
-            console.log('[NeonAuthService] Exchanging authorization code for token');
+            // Get user profile from backend
+            const userProfile = await this.getUserProfile(finalToken);
             
-            // Exchange code for access token
-            const tokenResponse = await fetch('https://api.stack-auth.com/api/v1/auth/tokens/exchange', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    project_id: this.config.projectId,
-                    publishable_client_key: this.config.publishableKey,
-                    code: code,
-                    redirect_uri: 'pickleglass://auth-success'
-                })
-            });
-
-            const tokenData = await tokenResponse.json();
-            
-            if (!tokenResponse.ok) {
-                throw new Error(tokenData.error || 'Token exchange failed');
+            if (!userProfile) {
+                throw new Error('Failed to get user profile');
             }
 
-            const { access_token, user } = tokenData;
-            
             // Store auth data
-            this.authToken = access_token;
-            this.currentUser = user;
-            this.currentUserId = user.id;
+            this.authToken = finalToken;
+            this.currentUser = userProfile;
+            this.currentUserId = userProfile.id;
             
             // Persist to storage
-            this.store.set('authToken', access_token);
-            this.store.set('user', user);
+            this.store.set('authToken', finalToken);
+            this.store.set('user', userProfile);
             
-            console.log('[NeonAuthService] Authentication successful for user:', user.id);
+            console.log('[NeonAuthService] Authentication successful for user:', userProfile.email);
             
             // Broadcast user state change
             this.broadcastUserState();
             
-            return { success: true, user };
+            return { success: true, user: userProfile };
             
         } catch (error) {
             console.error('[NeonAuthService] Auth callback error:', error);
             return { success: false, error: error.message };
+        }
+    }
+
+    async getUserProfile(token) {
+        try {
+            const response = await fetch(`${this.backendUrl}/api/auth/me`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data;
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('[NeonAuthService] Get user profile error:', error);
+            return null;
         }
     }
 
@@ -131,8 +166,7 @@ class NeonAuthService {
         }
 
         try {
-            const FASTAPI_URL = 'http://localhost:8002';
-            const response = await fetch(`${FASTAPI_URL}/api/auth/verify`, {
+            const response = await fetch(`${this.backendUrl}/api/auth/verify`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.authToken}`,
@@ -195,27 +229,29 @@ class NeonAuthService {
     getCurrentUser() {
         if (this.currentUser && this.authToken) {
             return {
-                id: this.currentUser.id,
+                uid: this.currentUser.id,
                 email: this.currentUser.email,
                 displayName: this.currentUser.display_name || this.currentUser.email,
                 photoURL: this.currentUser.photo_url,
+                role: this.currentUser.role,
+                currentPlan: this.currentUser.current_plan,
                 isLoggedIn: true,
-                authToken: this.authToken
+                mode: 'neon'
             };
         }
         
         return {
-            id: null,
-            email: null,
-            displayName: 'Guest User',
+            uid: 'default_user',
+            email: 'contact@glass.dev',
+            displayName: 'Default User',
             photoURL: null,
             isLoggedIn: false,
-            authToken: null
+            mode: 'local'
         };
     }
 
     getCurrentUserId() {
-        return this.currentUserId;
+        return this.currentUserId || 'default_user';
     }
 
     getAuthToken() {
@@ -224,6 +260,45 @@ class NeonAuthService {
 
     isAuthenticated() {
         return !!(this.authToken && this.currentUser);
+    }
+
+    // Helper method to make authenticated requests to backend
+    async makeAuthenticatedRequest(endpoint, options = {}) {
+        const token = this.getAuthToken();
+        
+        if (!token) {
+            throw new Error('No authentication token available');
+        }
+
+        const defaultOptions = {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        };
+
+        const finalOptions = {
+            ...defaultOptions,
+            ...options,
+            headers: {
+                ...defaultOptions.headers,
+                ...(options.headers || {})
+            }
+        };
+
+        const response = await fetch(`${this.backendUrl}${endpoint}`, finalOptions);
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                // Token expired, clear session
+                this.clearSession();
+                this.broadcastUserState();
+                throw new Error('Authentication expired');
+            }
+            throw new Error(`Request failed: ${response.status}`);
+        }
+
+        return response.json();
     }
 }
 
