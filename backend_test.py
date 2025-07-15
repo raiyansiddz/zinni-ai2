@@ -10,7 +10,7 @@ import sys
 from typing import Dict, Any, Optional
 
 # Base URL for the API
-BASE_URL = "http://localhost:8002"
+BASE_URL = "http://localhost:8001"
 
 class BackendTester:
     def __init__(self):
