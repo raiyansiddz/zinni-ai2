@@ -185,6 +185,9 @@ app.whenReady().then(async () => {
     console.log('[index.js] Initializing Neon Auth...');
     await neonAuthService.initialize();
     
+    // Configure session repository to use neonAuthService  
+    sessionRepository.setAuthService(neonAuthService);
+    
     try {
         await databaseInitializer.initialize();
         console.log('>>> [index.js] Database initialized successfully');
