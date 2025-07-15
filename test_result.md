@@ -102,10 +102,10 @@ Migrate an existing SaaS system from Firebase/Node.js/Express.js/Next.js/Electro
 - ✅ Error responses follow consistent JSON format
 
 ## API Configuration
-- **Backend URL**: http://localhost:8002
+- **Backend URL**: http://localhost:8001 ✅ (Updated: Running on port 8001, not 8002)
 - **Database**: PostgreSQL (Neon DB) - Connected ✅
 - **Authentication**: Neon Auth - Configured ✅
-- **AI Provider**: Gemini - Active ✅
+- **AI Provider**: Gemini, OpenAI, Claude - Active ✅
 - **Stripe**: Test mode - Ready ✅
 
 ## Next Steps - Phase 2: Frontend Integration
