@@ -1,92 +1,202 @@
-'use client'
+'use client';
 
-import { ExternalLink } from 'lucide-react'
-import { useRedirectIfNotAuth } from '@/utils/auth'
+import { useState, useEffect } from 'react';
+import { Shield, Eye, EyeOff, Lock, Database, Trash2 } from 'lucide-react';
+import DashboardLayout from '@/components/DashboardLayout';
 
-export default function PrivacySettingsPage() {
-  const userInfo = useRedirectIfNotAuth()
+export default function PrivacyPage() {
+  const [settings, setSettings] = useState({
+    dataCollection: true,
+    analytics: true,
+    thirdPartySharing: false,
+    marketingEmails: false,
+    sessionRecording: true,
+    aiTraining: false
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
-  if (!userInfo) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
-  }
+  const handleToggle = (setting: string) => {
+    setSettings(prev => ({ ...prev, [setting]: !prev[setting] }));
+  };
 
-  const tabs = [
-    { id: 'profile', name: 'Personal profile', href: '/settings' },
-    { id: 'privacy', name: 'Data & privacy', href: '/settings/privacy' },
-    { id: 'billing', name: 'Billing', href: '/settings/billing' },
-  ]
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      // TODO: Implement API call to save privacy settings
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setMessage('Privacy settings updated successfully!');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error) {
+      console.error('Error saving privacy settings:', error);
+      setMessage('Failed to update privacy settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data.'
+    );
+    
+    if (confirmed) {
+      try {
+        // TODO: Implement account deletion
+        console.log('Account deletion requested');
+        alert('Account deletion request submitted. You will receive a confirmation email.');
+      } catch (error) {
+        console.error('Error deleting account:', error);
+        alert('Failed to delete account. Please try again.');
+      }
+    }
+  };
+
+  const ToggleSwitch = ({ enabled, onToggle }) => (
+    <button
+      onClick={onToggle}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+        enabled ? 'bg-blue-600' : 'bg-gray-200'
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition-transform ${
+          enabled ? 'translate-x-6' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  );
+
+  const privacySettings = [
+    {
+      id: 'dataCollection',
+      title: 'Data Collection',
+      description: 'Allow us to collect usage data to improve our services',
+      icon: Database,
+      enabled: settings.dataCollection
+    },
+    {
+      id: 'analytics',
+      title: 'Analytics',
+      description: 'Help us understand how you use the app with anonymous analytics',
+      icon: Eye,
+      enabled: settings.analytics
+    },
+    {
+      id: 'thirdPartySharing',
+      title: 'Third-party Sharing',
+      description: 'Share anonymous usage data with trusted third-party services',
+      icon: Shield,
+      enabled: settings.thirdPartySharing
+    },
+    {
+      id: 'marketingEmails',
+      title: 'Marketing Emails',
+      description: 'Receive emails about new features and product updates',
+      icon: Eye,
+      enabled: settings.marketingEmails
+    },
+    {
+      id: 'sessionRecording',
+      title: 'Session Recording',
+      description: 'Record your AI conversations for quality improvement',
+      icon: Eye,
+      enabled: settings.sessionRecording
+    },
+    {
+      id: 'aiTraining',
+      title: 'AI Training',
+      description: 'Use your conversations to improve our AI models',
+      icon: Database,
+      enabled: settings.aiTraining
+    }
+  ];
 
   return (
-    <div className="bg-stone-50 min-h-screen">
-      <div className="px-8 py-8">
-        <div className="mb-6">
-          <p className="text-xs text-gray-500 mb-1">Settings</p>
-          <h1 className="text-3xl font-bold text-gray-900">Personal settings</h1>
-        </div>
-        
-        <div className="mb-8">
-          <nav className="flex space-x-10">
-            {tabs.map((tab) => (
-              <a
-                key={tab.id}
-                href={tab.href}
-                className={`pb-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                  tab.id === 'privacy'
-                    ? 'border-gray-900 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                {tab.name}
-              </a>
-            ))}
-          </nav>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Data & Privacy</h1>
+          <p className="text-gray-600">Manage your data and privacy preferences</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
-          <div className="bg-white border border-gray-200 rounded-lg p-6 flex flex-col">
-            <div className="flex-grow">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Privacy Policy</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">
-                Understand how we collect, use, and protect your personal information.
-              </p>
-            </div>
-            <div className="flex justify-end mt-6">
-              <button
-                onClick={() => window.open('https://www.pickle.com/ko/privacy-policy', '_blank')}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-sm font-medium transition-colors"
-              >
-                Privacy
-                <ExternalLink className="h-4 w-4" />
-              </button>
-            </div>
+        {/* Privacy Settings */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">Privacy Settings</h2>
+          
+          <div className="space-y-6">
+            {privacySettings.map((setting) => (
+              <div key={setting.id} className="flex items-center justify-between py-4 border-b border-gray-100 last:border-b-0">
+                <div className="flex items-start space-x-3">
+                  <div className="p-2 bg-gray-100 rounded-lg">
+                    <setting.icon className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">{setting.title}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{setting.description}</p>
+                  </div>
+                </div>
+                <ToggleSwitch
+                  enabled={setting.enabled}
+                  onToggle={() => handleToggle(setting.id)}
+                />
+              </div>
+            ))}
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-6 flex flex-col">
-            <div className="flex-grow">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Terms of Service</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">
-                Understand your rights and responsibilities when using our platform.
-              </p>
+          {message && (
+            <div className={`mt-6 p-3 rounded-lg ${
+              message.includes('successfully') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+            }`}>
+              {message}
             </div>
-            <div className="flex justify-end mt-6">
-              <button
-                onClick={() => window.open('https://www.pickle.com/ko/terms-of-service', '_blank')}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-sm font-medium transition-colors"
-              >
-                Terms
-                <ExternalLink className="h-4 w-4" />
-              </button>
+          )}
+
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {loading ? 'Saving...' : 'Save Settings'}
+            </button>
+          </div>
+        </div>
+
+        {/* Data Export */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Data Export</h2>
+          <p className="text-gray-600 mb-4">
+            Download a copy of your data including conversations, settings, and preferences.
+          </p>
+          <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+            Request Data Export
+          </button>
+        </div>
+
+        {/* Account Deletion */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h2 className="text-lg font-semibold text-red-600 mb-4">Danger Zone</h2>
+          <div className="bg-red-50 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <Trash2 className="h-5 w-5 text-red-600 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-medium text-red-800">Delete Account</h3>
+                <p className="text-sm text-red-700 mt-1">
+                  Permanently delete your account and all associated data. This action cannot be undone.
+                </p>
+                <button
+                  onClick={handleDeleteAccount}
+                  className="mt-3 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm"
+                >
+                  Delete Account
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  )
-} 
+    </DashboardLayout>
+  );
+}
