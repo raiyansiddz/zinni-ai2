@@ -4,6 +4,7 @@ export interface UserProfile {
   uid: string;
   display_name: string;
   email: string;
+  photo_url?: string;
 }
 
 export interface Session {
