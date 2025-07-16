@@ -1,18 +1,4 @@
-import { auth as firebaseAuth } from './firebase';
-import { 
-  FirestoreUserService, 
-  FirestoreSessionService, 
-  FirestoreTranscriptService, 
-  FirestoreAiMessageService, 
-  FirestoreSummaryService, 
-  FirestorePromptPresetService,
-  FirestoreSession,
-  FirestoreTranscript,
-  FirestoreAiMessage,
-  FirestoreSummary,
-  FirestorePromptPreset
-} from './firestore';
-import { Timestamp } from 'firebase/firestore';
+import { stackClientApp } from './stack-auth'
 
 export interface UserProfile {
   uid: string;
@@ -85,144 +71,28 @@ export interface SessionDetails {
     summary: Summary | null;
 }
 
-
-const isFirebaseMode = (): boolean => {
-  // The web frontend can no longer directly access Firebase state,
-  // so we assume communication always goes through the backend API.
-  // In the future, we can create an endpoint like /api/auth/status 
-  // in the backend to retrieve the authentication state.
-  return false;
-};
-
-const timestampToUnix = (timestamp: Timestamp): number => {
-  return timestamp.seconds * 1000 + Math.floor(timestamp.nanoseconds / 1000000);
-};
-
-const unixToTimestamp = (unix: number): Timestamp => {
-  return Timestamp.fromMillis(unix);
-};
-
-const convertFirestoreSession = (session: { id: string } & FirestoreSession, uid: string): Session => {
-  return {
-    id: session.id,
-    uid,
-    title: session.title,
-    session_type: session.session_type,
-    started_at: timestampToUnix(session.startedAt),
-    ended_at: session.endedAt ? timestampToUnix(session.endedAt) : undefined,
-    sync_state: 'clean',
-    updated_at: timestampToUnix(session.startedAt)
-  };
-};
-
-const convertFirestoreTranscript = (transcript: { id: string } & FirestoreTranscript): Transcript => {
-  return {
-    id: transcript.id,
-    session_id: '',
-    start_at: timestampToUnix(transcript.startAt),
-    end_at: transcript.endAt ? timestampToUnix(transcript.endAt) : undefined,
-    speaker: transcript.speaker,
-    text: transcript.text,
-    lang: transcript.lang,
-    created_at: timestampToUnix(transcript.createdAt),
-    sync_state: 'clean'
-  };
-};
-
-const convertFirestoreAiMessage = (message: { id: string } & FirestoreAiMessage): AiMessage => {
-  return {
-    id: message.id,
-    session_id: '',
-    sent_at: timestampToUnix(message.sentAt),
-    role: message.role,
-    content: message.content,
-    tokens: message.tokens,
-    model: message.model,
-    created_at: timestampToUnix(message.createdAt),
-    sync_state: 'clean'
-  };
-};
-
-const convertFirestoreSummary = (summary: FirestoreSummary, sessionId: string): Summary => {
-  return {
-    session_id: sessionId,
-    generated_at: timestampToUnix(summary.generatedAt),
-    model: summary.model,
-    text: summary.text,
-    tldr: summary.tldr,
-    bullet_json: JSON.stringify(summary.bulletPoints),
-    action_json: JSON.stringify(summary.actionItems),
-    tokens_used: summary.tokensUsed,
-    updated_at: timestampToUnix(summary.generatedAt),
-    sync_state: 'clean'
-  };
-};
-
-const convertFirestorePreset = (preset: { id: string } & FirestorePromptPreset, uid: string): PromptPreset => {
-  return {
-    id: preset.id,
-    uid,
-    title: preset.title,
-    prompt: preset.prompt,
-    is_default: preset.isDefault ? 1 : 0,
-    created_at: timestampToUnix(preset.createdAt),
-    sync_state: 'clean'
-  };
-};
-
-
-let API_ORIGIN = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:8001'
-  : '';
-
-const loadRuntimeConfig = async (): Promise<string | null> => {
-  try {
-    const response = await fetch('/runtime-config.json');
-    if (response.ok) {
-      const config = await response.json();
-      console.log('✅ Runtime config loaded:', config);
-      return config.API_URL;
-    }
-  } catch (error) {
-    console.log('⚠️ Failed to load runtime config:', error);
-  }
-  return null;
-};
-
-let apiUrlInitialized = false;
-let initializationPromise: Promise<void> | null = null;
-
-const initializeApiUrl = async () => {
-  if (apiUrlInitialized) return;
-  
-  // Electron IPC 관련 코드를 모두 제거하고 runtime-config.json 또는 fallback에만 의존합니다.
-  const runtimeUrl = await loadRuntimeConfig();
-  if (runtimeUrl) {
-    API_ORIGIN = runtimeUrl;
-    apiUrlInitialized = true;
-    return;
-  }
-
-  console.log('📍 Using fallback API URL:', API_ORIGIN);
-  apiUrlInitialized = true;
-};
-
-if (typeof window !== 'undefined') {
-  initializationPromise = initializeApiUrl();
+export interface BatchData {
+    profile?: UserProfile;
+    presets?: PromptPreset[];
+    sessions?: Session[];
 }
 
+// API Origin Configuration
+const API_ORIGIN = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8001';
+
+// User Info Management
 const userInfoListeners: Array<(userInfo: UserProfile | null) => void> = [];
 
 export const getUserInfo = (): UserProfile | null => {
   if (typeof window === 'undefined') return null;
   
-  const storedUserInfo = localStorage.getItem('pickleglass_user');
+  const storedUserInfo = localStorage.getItem('glass_user');
   if (storedUserInfo) {
     try {
       return JSON.parse(storedUserInfo);
     } catch (error) {
       console.error('Failed to parse user info:', error);
-      localStorage.removeItem('pickleglass_user');
+      localStorage.removeItem('glass_user');
     }
   }
   return null;
@@ -232,14 +102,13 @@ export const setUserInfo = (userInfo: UserProfile | null, skipEvents: boolean = 
   if (typeof window === 'undefined') return;
   
   if (userInfo) {
-    localStorage.setItem('pickleglass_user', JSON.stringify(userInfo));
+    localStorage.setItem('glass_user', JSON.stringify(userInfo));
   } else {
-    localStorage.removeItem('pickleglass_user');
+    localStorage.removeItem('glass_user');
   }
   
   if (!skipEvents) {
     userInfoListeners.forEach(listener => listener(userInfo));
-    
     window.dispatchEvent(new Event('userInfoChanged'));
   }
 };
@@ -255,11 +124,23 @@ export const onUserInfoChange = (listener: (userInfo: UserProfile | null) => voi
   };
 };
 
-export const getApiHeaders = (): HeadersInit => {
+// API Headers with Authentication
+export const getApiHeaders = async (): Promise<HeadersInit> => {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
   
+  try {
+    // Try to get Stack Auth token
+    const user = await stackClientApp.getUser();
+    if (user && user.accessToken) {
+      headers['Authorization'] = `Bearer ${user.accessToken}`;
+    }
+  } catch (error) {
+    console.warn('Failed to get Stack Auth token:', error);
+  }
+  
+  // Fallback to user ID header for local mode
   const userInfo = getUserInfo();
   if (userInfo?.uid) {
     headers['X-User-ID'] = userInfo.uid;
@@ -268,320 +149,186 @@ export const getApiHeaders = (): HeadersInit => {
   return headers;
 };
 
-
+// API Call Helper
 export const apiCall = async (path: string, options: RequestInit = {}) => {
-  if (!apiUrlInitialized && initializationPromise) {
-    await initializationPromise;
-  }
-  
-  if (!apiUrlInitialized) {
-    await initializeApiUrl();
-  }
-  
   const url = `${API_ORIGIN}${path}`;
-  console.log('🌐 apiCall (Local Mode):', {
+  console.log('🌐 API Call:', {
     path,
     API_ORIGIN,
     fullUrl: url,
-    initialized: apiUrlInitialized,
-    timestamp: new Date().toISOString()
+    method: options.method || 'GET'
   });
+  
+  const headers = await getApiHeaders();
   
   const defaultOpts: RequestInit = {
     headers: {
-      'Content-Type': 'application/json',
-      ...getApiHeaders(),
+      ...headers,
       ...(options.headers || {}),
     },
     ...options,
   };
-  return fetch(url, defaultOpts);
+  
+  const response = await fetch(url, defaultOpts);
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API Error ${response.status}: ${errorText}`);
+  }
+  
+  return response;
 };
 
+// Authentication APIs
+export const findOrCreateUser = async (user: UserProfile): Promise<UserProfile> => {
+  const response = await apiCall('/api/auth/me', {
+    method: 'GET',
+  });
+  
+  if (response.ok) {
+    return response.json();
+  }
+  
+  // If user doesn't exist, create them
+  const createResponse = await apiCall('/api/user/profile', {
+    method: 'POST',
+    body: JSON.stringify(user),
+  });
+  
+  return createResponse.json();
+};
 
+// Session Management
 export const searchConversations = async (query: string): Promise<Session[]> => {
   if (!query.trim()) {
     return [];
   }
 
-  if (isFirebaseMode()) {
-    const sessions = await getSessions();
-    return sessions.filter(session => 
-      session.title.toLowerCase().includes(query.toLowerCase())
-    );
-  } else {
-    const response = await apiCall(`/api/conversations/search?q=${encodeURIComponent(query)}`, {
-      method: 'GET',
-    });
-    if (!response.ok) {
-      throw new Error('Failed to search conversations');
-    }
-    return response.json();
-  }
+  const response = await apiCall(`/api/track/sessions?search=${encodeURIComponent(query)}`);
+  return response.json();
 };
 
 export const getSessions = async (): Promise<Session[]> => {
-  if (isFirebaseMode()) {
-    const uid = firebaseAuth.currentUser!.uid;
-    const firestoreSessions = await FirestoreSessionService.getSessions(uid);
-    return firestoreSessions.map(session => convertFirestoreSession(session, uid));
-  } else {
-    const response = await apiCall(`/api/conversations`, { method: 'GET' });
-    if (!response.ok) throw new Error('Failed to fetch sessions');
-    return response.json();
-  }
+  const response = await apiCall('/api/track/sessions');
+  return response.json();
 };
 
 export const getSessionDetails = async (sessionId: string): Promise<SessionDetails> => {
-  if (isFirebaseMode()) {
-    const uid = firebaseAuth.currentUser!.uid;
-    
-    const [session, transcripts, aiMessages, summary] = await Promise.all([
-      FirestoreSessionService.getSession(uid, sessionId),
-      FirestoreTranscriptService.getTranscripts(uid, sessionId),
-      FirestoreAiMessageService.getAiMessages(uid, sessionId),
-      FirestoreSummaryService.getSummary(uid, sessionId)
-    ]);
-
-    if (!session) {
-      throw new Error('Session not found');
-    }
-
-    return {
-      session: convertFirestoreSession({ id: sessionId, ...session }, uid),
-      transcripts: transcripts.map(t => ({ ...convertFirestoreTranscript(t), session_id: sessionId })),
-      ai_messages: aiMessages.map(m => ({ ...convertFirestoreAiMessage(m), session_id: sessionId })),
-      summary: summary ? convertFirestoreSummary(summary, sessionId) : null
-    };
-  } else {
-    const response = await apiCall(`/api/conversations/${sessionId}`, { method: 'GET' });
-    if (!response.ok) throw new Error('Failed to fetch session details');
-    return response.json();
-  }
+  const response = await apiCall(`/api/track/sessions/${sessionId}`);
+  return response.json();
 };
 
 export const createSession = async (title?: string): Promise<{ id: string }> => {
-  if (isFirebaseMode()) {
-    const uid = firebaseAuth.currentUser!.uid;
-    const sessionId = await FirestoreSessionService.createSession(uid, {
-      title: title || 'New Session',
-      session_type: 'ask',
-      endedAt: undefined
-    });
-    return { id: sessionId };
-  } else {
-    const response = await apiCall(`/api/conversations`, {
-      method: 'POST',
-      body: JSON.stringify({ title }),
-    });
-    if (!response.ok) throw new Error('Failed to create session');
-    return response.json();
-  }
+  const response = await apiCall('/api/track/', {
+    method: 'POST',
+    body: JSON.stringify({ 
+      action_type: 'session_start',
+      session_title: title || 'New Session'
+    }),
+  });
+  return response.json();
 };
 
 export const deleteSession = async (sessionId: string): Promise<void> => {
-  if (isFirebaseMode()) {
-    const uid = firebaseAuth.currentUser!.uid;
-    await FirestoreSessionService.deleteSession(uid, sessionId);
-  } else {
-    const response = await apiCall(`/api/conversations/${sessionId}`, { method: 'DELETE' });
-    if (!response.ok) throw new Error('Failed to delete session');
-  }
+  await apiCall(`/api/track/sessions/${sessionId}`, { 
+    method: 'DELETE' 
+  });
 };
 
+// User Profile Management
 export const getUserProfile = async (): Promise<UserProfile> => {
-  if (isFirebaseMode()) {
-    const user = firebaseAuth.currentUser!;
-    const firestoreProfile = await FirestoreUserService.getUser(user.uid);
-    
-    return {
-      uid: user.uid,
-      display_name: firestoreProfile?.displayName || user.displayName || 'User',
-      email: firestoreProfile?.email || user.email || 'no-email@example.com'
-    };
-  } else {
-    const response = await apiCall(`/api/user/profile`, { method: 'GET' });
-    if (!response.ok) throw new Error('Failed to fetch user profile');
-    return response.json();
-  }
+  const response = await apiCall('/api/user/profile');
+  return response.json();
 };
 
 export const updateUserProfile = async (data: { displayName: string }): Promise<void> => {
-  if (isFirebaseMode()) {
-    const uid = firebaseAuth.currentUser!.uid;
-    await FirestoreUserService.updateUser(uid, { displayName: data.displayName });
-  } else {
-    const response = await apiCall(`/api/user/profile`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error('Failed to update user profile');
-  }
-};
-
-export const findOrCreateUser = async (user: UserProfile): Promise<UserProfile> => {
-  if (isFirebaseMode()) {
-    const uid = firebaseAuth.currentUser!.uid;
-    const existingUser = await FirestoreUserService.getUser(uid);
-    
-    if (!existingUser) {
-      await FirestoreUserService.createUser(uid, {
-        displayName: user.display_name,
-        email: user.email
-      });
-    }
-    
-    return user;
-  } else {
-    const response = await apiCall(`/api/user/find-or-create`, {
-        method: 'POST',
-        body: JSON.stringify(user),
-    });
-    if (!response.ok) throw new Error('Failed to find or create user');
-    return response.json();
-  }
-};
-
-export const saveApiKey = async (apiKey: string): Promise<void> => {
-  if (isFirebaseMode()) {
-    console.log('API key is not needed in Firebase mode');
-    return;
-  } else {
-    const response = await apiCall(`/api/user/api-key`, {
-        method: 'POST',
-        body: JSON.stringify({ apiKey }),
-    });
-    if (!response.ok) throw new Error('Failed to save API key');
-  }
-};
-
-export const checkApiKeyStatus = async (): Promise<{ hasApiKey: boolean }> => {
-  if (isFirebaseMode()) {
-    return { hasApiKey: true };
-  } else {
-    const response = await apiCall(`/api/user/api-key-status`, { method: 'GET' });
-    if (!response.ok) throw new Error('Failed to check API key status');
-    return response.json();
-  }
+  await apiCall('/api/user/profile', {
+    method: 'PUT',
+    body: JSON.stringify({ display_name: data.displayName }),
+  });
 };
 
 export const deleteAccount = async (): Promise<void> => {
-  if (isFirebaseMode()) {
-    const uid = firebaseAuth.currentUser!.uid;
-    
-    await FirestoreUserService.deleteUser(uid);
-    
-    await firebaseAuth.currentUser!.delete();
-  } else {
-    const response = await apiCall(`/api/user/profile`, { method: 'DELETE' });
-    if (!response.ok) throw new Error('Failed to delete account');
+  await apiCall('/api/user/profile', { method: 'DELETE' });
+};
+
+// API Key Management
+export const saveApiKey = async (apiKey: string): Promise<void> => {
+  await apiCall('/api/admin/api-keys', {
+    method: 'POST',
+    body: JSON.stringify({ provider: 'openai', api_key: apiKey }),
+  });
+};
+
+export const checkApiKeyStatus = async (): Promise<{ hasApiKey: boolean }> => {
+  try {
+    const response = await apiCall('/api/admin/api-keys');
+    const keys = await response.json();
+    return { hasApiKey: keys.length > 0 };
+  } catch (error) {
+    return { hasApiKey: false };
   }
 };
 
+// Prompt Presets
 export const getPresets = async (): Promise<PromptPreset[]> => {
-  if (isFirebaseMode()) {
-    const uid = firebaseAuth.currentUser!.uid;
-    const firestorePresets = await FirestorePromptPresetService.getPresets(uid);
-    return firestorePresets.map(preset => convertFirestorePreset(preset, uid));
-  } else {
-    const response = await apiCall(`/api/presets`, { method: 'GET' });
-    if (!response.ok) throw new Error('Failed to fetch presets');
-    return response.json();
-  }
+  // This would need to be implemented in the backend
+  // For now, return empty array
+  return [];
 };
 
 export const createPreset = async (data: { title: string, prompt: string }): Promise<{ id: string }> => {
-  if (isFirebaseMode()) {
-    const uid = firebaseAuth.currentUser!.uid;
-    const presetId = await FirestorePromptPresetService.createPreset(uid, {
-      title: data.title,
-      prompt: data.prompt,
-      isDefault: false
-    });
-    return { id: presetId };
-  } else {
-    const response = await apiCall(`/api/presets`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error('Failed to create preset');
-    return response.json();
-  }
+  // This would need to be implemented in the backend
+  throw new Error('Presets not implemented in backend yet');
 };
 
 export const updatePreset = async (id: string, data: { title: string, prompt: string }): Promise<void> => {
-  if (isFirebaseMode()) {
-    const uid = firebaseAuth.currentUser!.uid;
-    await FirestorePromptPresetService.updatePreset(uid, id, {
-      title: data.title,
-      prompt: data.prompt
-    });
-  } else {
-    const response = await apiCall(`/api/presets/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to update preset: ${response.status} ${errorText}`);
-    }
-  }
+  // This would need to be implemented in the backend
+  throw new Error('Presets not implemented in backend yet');
 };
 
 export const deletePreset = async (id: string): Promise<void> => {
-  if (isFirebaseMode()) {
-    const uid = firebaseAuth.currentUser!.uid;
-    await FirestorePromptPresetService.deletePreset(uid, id);
-  } else {
-    const response = await apiCall(`/api/presets/${id}`, { method: 'DELETE' });
-    if (!response.ok) throw new Error('Failed to delete preset');
-  }
+  // This would need to be implemented in the backend
+  throw new Error('Presets not implemented in backend yet');
 };
 
-export interface BatchData {
-    profile?: UserProfile;
-    presets?: PromptPreset[];
-    sessions?: Session[];
-}
-
+// Batch Data
 export const getBatchData = async (includes: ('profile' | 'presets' | 'sessions')[]): Promise<BatchData> => {
-  if (isFirebaseMode()) {
-    const result: BatchData = {};
-    
-    const promises: Promise<any>[] = [];
-    
-    if (includes.includes('profile')) {
-      promises.push(getUserProfile().then(profile => ({ type: 'profile', data: profile })));
-    }
-    if (includes.includes('presets')) {
-      promises.push(getPresets().then(presets => ({ type: 'presets', data: presets })));
-    }
-    if (includes.includes('sessions')) {
-      promises.push(getSessions().then(sessions => ({ type: 'sessions', data: sessions })));
-    }
-    
-    const results = await Promise.all(promises);
-    
-    results.forEach(({ type, data }) => {
-      result[type as keyof BatchData] = data;
-    });
-    
-    return result;
-  } else {
-    const response = await apiCall(`/api/user/batch?include=${includes.join(',')}`, { method: 'GET' });
-    if (!response.ok) throw new Error('Failed to fetch batch data');
-    return response.json();
+  const result: BatchData = {};
+  
+  const promises: Promise<any>[] = [];
+  
+  if (includes.includes('profile')) {
+    promises.push(getUserProfile().then(profile => ({ type: 'profile', data: profile })));
   }
+  if (includes.includes('presets')) {
+    promises.push(getPresets().then(presets => ({ type: 'presets', data: presets })));
+  }
+  if (includes.includes('sessions')) {
+    promises.push(getSessions().then(sessions => ({ type: 'sessions', data: sessions })));
+  }
+  
+  const results = await Promise.all(promises);
+  
+  results.forEach(({ type, data }) => {
+    result[type as keyof BatchData] = data;
+  });
+  
+  return result;
 };
 
+// Logout
 export const logout = async () => {
-  if (isFirebaseMode()) {
-    const { signOut } = await import('firebase/auth');
-    await signOut(firebaseAuth);
+  try {
+    await stackClientApp.signOut();
+  } catch (error) {
+    console.error('Stack Auth logout failed:', error);
   }
   
   setUserInfo(null);
   
+  // Clear local storage
+  localStorage.removeItem('glass_user');
   localStorage.removeItem('openai_api_key');
   localStorage.removeItem('user_info');
   
