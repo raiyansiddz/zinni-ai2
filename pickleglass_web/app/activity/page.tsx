@@ -6,12 +6,21 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { getSessions, deleteSession, getSessionDetails } from '@/utils/api';
 import { useRouter } from 'next/navigation';
 
+interface Session {
+  id: string;
+  title?: string;
+  session_type?: string;
+  started_at?: string;
+  ended_at?: string;
+  is_active?: boolean;
+}
+
 export default function ActivityPage() {
-  const [sessions, setSessions] = useState([]);
-  const [filteredSessions, setFilteredSessions] = useState([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSession, setSelectedSession] = useState(null);
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const router = useRouter();
 
