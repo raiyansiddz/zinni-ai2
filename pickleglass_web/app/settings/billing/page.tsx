@@ -4,6 +4,15 @@ import { useState, useEffect } from 'react';
 import { CreditCard, Check, X, Star, Crown } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 
+interface Plan {
+  name: string;
+  price: { monthly: number; yearly: number };
+  planType: string;
+  features: string[];
+  limitations: string[];
+  popular?: boolean;
+}
+
 export default function BillingPage() {
   const [currentPlan, setCurrentPlan] = useState('free');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
