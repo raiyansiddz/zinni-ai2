@@ -58,7 +58,7 @@ export default function ActivityPage() {
     }
   };
 
-  const SessionCard = ({ session }) => (
+  const SessionCard = ({ session }: { session: Session }) => (
     <div className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow p-4">
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-3">
