@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { MessageSquare, Search, Calendar, Filter, MoreHorizontal, Trash2, Edit } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { getSessions, deleteSession, getSessionDetails, Session } from '@/utils/api';
+import { getSessions, deleteSession, getSessionDetails, Session, SessionDetails } from '@/utils/api';
 import { useRouter } from 'next/navigation';
 
 export default function ActivityPage() {
@@ -11,7 +11,7 @@ export default function ActivityPage() {
   const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [selectedSession, setSelectedSession] = useState<SessionDetails | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const router = useRouter();
 
