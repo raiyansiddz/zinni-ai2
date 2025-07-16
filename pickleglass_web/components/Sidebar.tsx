@@ -250,9 +250,20 @@ const SidebarComponent = ({ isCollapsed, onToggle, onSearchClick }: SidebarProps
 
     const handleLogout = useCallback(async () => {
         try {
-            await logout();
+            // Use Stack Auth logout
+            const { useStackApp } = await import('@stackframe/stack')
+            const stackApp = useStackApp()
+            await stackApp.signOut()
+            
+            // Clear local storage
+            localStorage.removeItem('glass_user')
+            localStorage.removeItem('openai_api_key')
+            localStorage.removeItem('user_info')
+            
+            // Redirect to login
+            window.location.href = '/login'
         } catch (error) {
-            console.error('An error occurred during logout:', error);
+            console.error('An error occurred during logout:', error)
         }
     }, []);
 
