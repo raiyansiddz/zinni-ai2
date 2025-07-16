@@ -20,7 +20,7 @@ if (process.getuid && process.getuid() === 0) {
 }
 const { createWindows } = require('./window/windowManager.js');
 const listenService = require('./features/listen/listenService');
-const neonAuthService = require('./features/common/services/neonAuthService');
+const authService = require('./features/common/services/authService');
 const databaseInitializer = require('./features/common/services/databaseInitializer');
 const path = require('node:path');
 const express = require('express');
