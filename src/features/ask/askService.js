@@ -291,15 +291,7 @@ class AskService {
         }
     }
 
-            const askWin = getWindowPool()?.get('ask');
-            if (askWin && !askWin.isDestroyed()) {
-                const streamError = error.message || 'Unknown error occurred';
-                askWin.webContents.send('ask-response-stream-error', { error: streamError });
-            }
 
-            return { success: false, error: error.message };
-        }
-    }
 
     /**
      * 
