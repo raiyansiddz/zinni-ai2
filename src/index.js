@@ -506,7 +506,7 @@ async function handleNeonAuthCallback(params) {
     console.log('[Auth] Handling Neon Auth callback with params:', params);
 
     try {
-        const result = await neonAuthService.handleAuthCallback(params);
+        const result = await authService.handleNeonAuthCallback(params);
         
         if (!result.success) {
             throw new Error(result.error || 'Authentication failed');
