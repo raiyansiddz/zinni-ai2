@@ -1,7 +1,7 @@
 const { BrowserWindow, shell } = require('electron');
 const fetch = require('node-fetch');
 const Store = require('electron-store');
-const config = require('../../config/environment');
+const config = require('../../../config/environment');
 
 class NeonAuthService {
     constructor() {
