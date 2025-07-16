@@ -250,11 +250,6 @@ const SidebarComponent = ({ isCollapsed, onToggle, onSearchClick }: SidebarProps
 
     const handleLogout = useCallback(async () => {
         try {
-            // Use Stack Auth logout
-            const { useStackApp } = await import('@stackframe/stack')
-            const stackApp = useStackApp()
-            await stackApp.signOut()
-            
             // Clear local storage
             localStorage.removeItem('glass_user')
             localStorage.removeItem('openai_api_key')
