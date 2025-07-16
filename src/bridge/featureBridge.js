@@ -1,7 +1,7 @@
 // src/bridge/featureBridge.js
 const { ipcMain, app, BrowserWindow } = require('electron');
 const settingsService = require('../features/settings/settingsService');
-const neonAuthService = require('../features/common/services/neonAuthService');
+const authService = require('../features/common/services/authService');
 const whisperService = require('../features/common/services/whisperService');
 const ollamaService = require('../features/common/services/ollamaService');
 const modelStateService = require('../features/common/services/modelStateService');
