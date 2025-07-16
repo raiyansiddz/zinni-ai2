@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { MessageSquare, Activity, Settings, User, CreditCard, Bell, TrendingUp, Clock, Zap } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { getUserInfo, getSessions, getUserProfile } from '@/utils/api';
+import { getUserInfo, getSessions, getUserProfile, UserProfile, Session } from '@/utils/api';
 
 interface DashboardStats {
   totalSessions: number;
@@ -19,8 +19,8 @@ export default function Dashboard() {
     monthlyUsage: 0,
     planType: 'free'
   });
-  const [recentSessions, setRecentSessions] = useState([]);
-  const [user, setUser] = useState(null);
+  const [recentSessions, setRecentSessions] = useState<Session[]>([]);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
