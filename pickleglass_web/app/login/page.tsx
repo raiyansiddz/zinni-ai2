@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { stackClientApp } from '@/utils/stack-auth'
+import { useStackApp } from '@stackframe/stack'
 import { Chrome } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -9,6 +9,7 @@ export default function LoginPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isElectronMode, setIsElectronMode] = useState(false)
+  const stackApp = useStackApp()
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
@@ -21,9 +22,9 @@ export default function LoginPage() {
     
     try {
       // Use Stack Auth for authentication
-      await stackClientApp.signInWithOAuth('google', {
-        redirectUrl: window.location.origin + '/dashboard'
-      })
+      await stackApp.signInWithOAuth('google')
+      // After successful login, redirect to dashboard
+      router.push('/dashboard')
     } catch (error: any) {
       console.error('❌ Stack Auth login failed:', error)
       
