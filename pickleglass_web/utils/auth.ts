@@ -11,8 +11,8 @@ export const useAuth = () => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Check if user is authenticated with Stack Auth
-        const stackUser = stackClientApp.useUser()
+        // Get the current user from Stack Auth
+        const stackUser = await stackClientApp.getUser()
         
         if (stackUser) {
           console.log('🔐 Stack Auth mode activated:', stackUser.id);
