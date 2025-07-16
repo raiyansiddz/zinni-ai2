@@ -3,10 +3,16 @@
 import { useState, useEffect } from 'react';
 import { User, Save, Upload, Camera } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { getUserProfile, updateUserProfile } from '@/utils/api';
+import { getUserProfile, updateUserProfile, UserProfile } from '@/utils/api';
+
+interface ProfileData {
+  display_name: string;
+  email: string;
+  photo_url?: string;
+}
 
 export default function SettingsPage() {
-  const [profile, setProfile] = useState({
+  const [profile, setProfile] = useState<ProfileData>({
     display_name: '',
     email: '',
     photo_url: ''
