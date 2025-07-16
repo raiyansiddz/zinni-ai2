@@ -49,13 +49,9 @@ function update({ uid, displayName }) {
 }
 
 function setMigrationComplete(uid) {
-    const db = sqliteClient.getDb();
-    const stmt = db.prepare('UPDATE users SET has_migrated_to_firebase = 1 WHERE uid = ?');
-    const result = stmt.run(uid);
-    if (result.changes > 0) {
-        console.log(`[Repo] Marked migration as complete for user ${uid}.`);
-    }
-    return result;
+    // Migration functionality has been removed since we no longer use Firebase
+    console.log(`[Repo] Migration functionality deprecated - user ${uid} already using Neon DB.`);
+    return { changes: 0 };
 }
 
 function deleteById(uid) {
