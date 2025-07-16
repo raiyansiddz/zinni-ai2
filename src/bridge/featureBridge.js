@@ -49,9 +49,9 @@ module.exports = {
     });
 
     // User/Auth
-    ipcMain.handle('get-current-user', () => neonAuthService.getCurrentUser());
-    ipcMain.handle('start-neon-auth', async () => await neonAuthService.startAuthFlow());
-    ipcMain.handle('neon-logout', async () => await neonAuthService.signOut());
+    ipcMain.handle('get-current-user', () => authService.getCurrentUser());
+    ipcMain.handle('start-neon-auth', async () => await authService.startNeonAuthFlow());
+    ipcMain.handle('neon-logout', async () => await authService.signOut());
 
     // App
     ipcMain.handle('quit-application', () => app.quit());
