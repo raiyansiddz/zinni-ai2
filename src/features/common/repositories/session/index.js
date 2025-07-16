@@ -1,5 +1,4 @@
 const sqliteRepository = require('./sqlite.repository');
-const firebaseRepository = require('./firebase.repository');
 
 let authService = null;
 
@@ -13,10 +12,7 @@ function getBaseRepository() {
         // During initial load, it might not be set, so we default to sqlite.
         return sqliteRepository;
     }
-    const user = authService.getCurrentUser();
-    if (user && user.isLoggedIn) {
-        return firebaseRepository;
-    }
+    // Always use SQLite repository now that we've migrated from Firebase
     return sqliteRepository;
 }
 
