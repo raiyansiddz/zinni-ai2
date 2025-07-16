@@ -1,19 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserProfile, setUserInfo, findOrCreateUser } from './api'
-import { stackClientApp } from './stack-auth'
+import { useUser } from '@stackframe/stack'
 
 export const useAuth = () => {
   const [user, setUser] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [mode, setMode] = useState<'stack' | 'local' | null>(null)
+  const stackUser = useUser()
   
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Get the current user from Stack Auth
-        const stackUser = await stackClientApp.getUser()
-        
         if (stackUser) {
           console.log('🔐 Stack Auth mode activated:', stackUser.id);
           setMode('stack');
@@ -64,7 +62,7 @@ export const useAuth = () => {
     };
 
     initializeAuth();
-  }, [])
+  }, [stackUser])
 
   return { user, isLoading, mode }
 }
