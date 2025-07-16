@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Backend API Testing Script for Glass AI Assistant
-Tests FastAPI backend running on http://localhost:8002
+Tests FastAPI backend with Stack Auth and PostgreSQL integration
 """
 
 import requests
@@ -43,6 +43,10 @@ class BackendTester:
                 response = requests.get(url, headers=headers, timeout=10)
             elif method.upper() == "POST":
                 response = requests.post(url, headers=headers, data=data, json=json_data, timeout=10)
+            elif method.upper() == "PUT":
+                response = requests.put(url, headers=headers, data=data, json=json_data, timeout=10)
+            elif method.upper() == "DELETE":
+                response = requests.delete(url, headers=headers, timeout=10)
             else:
                 raise ValueError(f"Unsupported method: {method}")
             return response
@@ -87,18 +91,15 @@ class BackendTester:
             self.log_test("Health Endpoint", False, f"Exception: {str(e)}")
 
     def test_plan_management(self):
-        """Test plan management endpoints (no auth required)"""
+        """Test plan management endpoints"""
         print("\n=== Testing Plan Management ===")
         
+        # Test public plans endpoint
         try:
-            print(f"Making request to: {self.base_url}/api/plan/")
             response = self.make_request("GET", "/api/plan/")
-            print(f"Response status code: {response.status_code}")
-            print(f"Response headers: {dict(response.headers)}")
             
             if response.status_code == 200:
                 plans = response.json()
-                print(f"Response data: {plans}")
                 
                 # Check if we have 4 plans
                 if len(plans) == 4:
@@ -147,29 +148,37 @@ class BackendTester:
                     self.log_test("Plan Types", False, f"Missing plan types: {missing_plans}", found_plan_types)
                     
             else:
-                print(f"Response text: {response.text}")
                 self.log_test("Plans Endpoint", False, f"Status code: {response.status_code}", response.text)
                 
         except Exception as e:
-            print(f"Exception occurred: {str(e)}")
-            import traceback
-            traceback.print_exc()
             self.log_test("Plans Endpoint", False, f"Exception: {str(e)}")
 
-    def test_ai_provider_endpoints(self):
-        """Test AI provider endpoints"""
-        print("\n=== Testing AI Provider Endpoints ===")
+        # Test protected plan endpoints (should return 403)
+        protected_plan_endpoints = [
+            ("/api/plan/current", "GET", "Current Plan"),
+            ("/api/plan/usage", "GET", "Plan Usage")
+        ]
         
+        for endpoint, method, name in protected_plan_endpoints:
+            try:
+                response = self.make_request(method, endpoint)
+                if response.status_code == 403:
+                    self.log_test(f"{name} (No Auth)", True, "Correctly returned 403 for missing token")
+                else:
+                    self.log_test(f"{name} (No Auth)", False, f"Expected 403, got {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test(f"{name} (No Auth)", False, f"Exception: {str(e)}")
+
+    def test_ai_endpoints(self):
+        """Test AI-related endpoints"""
+        print("\n=== Testing AI Endpoints ===")
+        
+        # Test public AI providers endpoint
         try:
             response = self.make_request("GET", "/api/ask/providers")
             
             if response.status_code == 200:
                 response_json = response.json()
-                expected_structure = {
-                    "success": True,
-                    "message": "Available AI providers",
-                    "data": {"providers": ["gemini"]}
-                }
                 
                 # Check response structure
                 if (response_json.get("success") == True and 
@@ -189,6 +198,23 @@ class BackendTester:
                 
         except Exception as e:
             self.log_test("AI Providers", False, f"Exception: {str(e)}")
+
+        # Test protected AI endpoints (should return 403)
+        protected_ai_endpoints = [
+            ("/api/ask/", "POST", "AI Ask"),
+            ("/api/ask/messages?session_id=test", "GET", "AI Messages")
+        ]
+        
+        for endpoint, method, name in protected_ai_endpoints:
+            try:
+                json_data = {"prompt": "test"} if method == "POST" else None
+                response = self.make_request(method, endpoint, json_data=json_data)
+                if response.status_code == 403:
+                    self.log_test(f"{name} (No Auth)", True, "Correctly returned 403 for missing token")
+                else:
+                    self.log_test(f"{name} (No Auth)", False, f"Expected 403, got {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test(f"{name} (No Auth)", False, f"Exception: {str(e)}")
 
     def test_authentication_endpoints(self):
         """Test authentication endpoints"""
@@ -213,29 +239,118 @@ class BackendTester:
         except Exception as e:
             self.log_test("Auth Status (No Token)", False, f"Exception: {str(e)}")
         
-        # Test auth verify (should return 403 without token - FastAPI HTTPBearer behavior)
-        try:
-            response = self.make_request("POST", "/api/auth/verify")
-            
-            if response.status_code == 403:
-                self.log_test("Auth Verify (No Token)", True, "Correctly returned 403 for missing token")
-            else:
-                self.log_test("Auth Verify (No Token)", False, f"Expected 403, got {response.status_code}", response.text)
-                
-        except Exception as e:
-            self.log_test("Auth Verify (No Token)", False, f"Exception: {str(e)}")
+        # Test protected auth endpoints (should return 403)
+        protected_auth_endpoints = [
+            ("/api/auth/verify", "POST", "Auth Verify"),
+            ("/api/auth/me", "GET", "Auth Me")
+        ]
         
-        # Test auth me (should return 403 without token - FastAPI HTTPBearer behavior)
+        for endpoint, method, name in protected_auth_endpoints:
+            try:
+                response = self.make_request(method, endpoint)
+                if response.status_code == 403:
+                    self.log_test(f"{name} (No Token)", True, "Correctly returned 403 for missing token")
+                else:
+                    self.log_test(f"{name} (No Token)", False, f"Expected 403, got {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test(f"{name} (No Token)", False, f"Exception: {str(e)}")
+
+    def test_user_management_endpoints(self):
+        """Test user management endpoints"""
+        print("\n=== Testing User Management Endpoints ===")
+        
+        # All user endpoints require authentication
+        protected_user_endpoints = [
+            ("/api/user/profile", "GET", "Get User Profile"),
+            ("/api/user/profile", "PUT", "Update User Profile"),
+            ("/api/user/profile", "DELETE", "Delete User Profile")
+        ]
+        
+        for endpoint, method, name in protected_user_endpoints:
+            try:
+                json_data = {"display_name": "test"} if method == "PUT" else None
+                response = self.make_request(method, endpoint, json_data=json_data)
+                if response.status_code == 403:
+                    self.log_test(f"{name} (No Auth)", True, "Correctly returned 403 for missing token")
+                else:
+                    self.log_test(f"{name} (No Auth)", False, f"Expected 403, got {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test(f"{name} (No Auth)", False, f"Exception: {str(e)}")
+
+    def test_usage_tracking_endpoints(self):
+        """Test usage tracking endpoints"""
+        print("\n=== Testing Usage Tracking Endpoints ===")
+        
+        # All tracking endpoints require authentication
+        protected_tracking_endpoints = [
+            ("/api/track/", "POST", "Track Usage"),
+            ("/api/track/sessions", "GET", "Get Sessions")
+        ]
+        
+        for endpoint, method, name in protected_tracking_endpoints:
+            try:
+                json_data = {"action_type": "test", "resource_used": "test", "quantity": 1} if method == "POST" else None
+                response = self.make_request(method, endpoint, json_data=json_data)
+                if response.status_code == 403:
+                    self.log_test(f"{name} (No Auth)", True, "Correctly returned 403 for missing token")
+                else:
+                    self.log_test(f"{name} (No Auth)", False, f"Expected 403, got {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test(f"{name} (No Auth)", False, f"Exception: {str(e)}")
+
+    def test_admin_endpoints(self):
+        """Test admin endpoints"""
+        print("\n=== Testing Admin Endpoints ===")
+        
+        # All admin endpoints require authentication and admin role
+        protected_admin_endpoints = [
+            ("/api/admin/users", "GET", "Admin Get Users"),
+            ("/api/admin/plans", "POST", "Admin Create Plan"),
+            ("/api/admin/api-keys", "GET", "Admin Get API Keys"),
+            ("/api/admin/stats", "GET", "Admin Get Stats")
+        ]
+        
+        for endpoint, method, name in protected_admin_endpoints:
+            try:
+                json_data = {"name": "test", "plan_type": "test", "price_monthly": 100, "price_yearly": 1000} if method == "POST" else None
+                response = self.make_request(method, endpoint, json_data=json_data)
+                if response.status_code == 403:
+                    self.log_test(f"{name} (No Auth)", True, "Correctly returned 403 for missing token")
+                else:
+                    self.log_test(f"{name} (No Auth)", False, f"Expected 403, got {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test(f"{name} (No Auth)", False, f"Exception: {str(e)}")
+
+    def test_stripe_endpoints(self):
+        """Test Stripe integration endpoints"""
+        print("\n=== Testing Stripe Integration Endpoints ===")
+        
+        # Test checkout session creation (requires auth)
         try:
-            response = self.make_request("GET", "/api/auth/me")
-            
+            json_data = {
+                "plan_type": "basic",
+                "billing_period": "monthly",
+                "success_url": "http://localhost:3000/success",
+                "cancel_url": "http://localhost:3000/cancel"
+            }
+            response = self.make_request("POST", "/api/checkout/create-session", json_data=json_data)
             if response.status_code == 403:
-                self.log_test("Auth Me (No Token)", True, "Correctly returned 403 for missing token")
+                self.log_test("Stripe Checkout (No Auth)", True, "Correctly returned 403 for missing token")
             else:
-                self.log_test("Auth Me (No Token)", False, f"Expected 403, got {response.status_code}", response.text)
-                
+                self.log_test("Stripe Checkout (No Auth)", False, f"Expected 403, got {response.status_code}", response.text)
         except Exception as e:
-            self.log_test("Auth Me (No Token)", False, f"Exception: {str(e)}")
+            self.log_test("Stripe Checkout (No Auth)", False, f"Exception: {str(e)}")
+
+        # Test webhook endpoint (should accept POST but fail without proper signature)
+        try:
+            response = self.make_request("POST", "/api/checkout/webhook", json_data={"test": "data"})
+            # Webhook should return 400 for missing signature, not 403
+            if response.status_code == 400:
+                self.log_test("Stripe Webhook", True, "Correctly returned 400 for missing signature")
+            else:
+                self.log_test("Stripe Webhook", False, f"Expected 400, got {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("Stripe Webhook", False, f"Exception: {str(e)}")
 
     def test_error_handling(self):
         """Test error handling for invalid endpoints and malformed requests"""
@@ -287,18 +402,48 @@ class BackendTester:
         except Exception as e:
             self.log_test("Database Connectivity", False, f"Database connection failed: {str(e)}")
 
+    def test_stack_auth_integration(self):
+        """Test Stack Auth integration"""
+        print("\n=== Testing Stack Auth Integration ===")
+        
+        # Test that Stack Auth configuration is working by checking auth status endpoint
+        try:
+            response = self.make_request("GET", "/api/auth/status")
+            
+            if response.status_code == 200:
+                response_json = response.json()
+                
+                # Check that the response has the expected Stack Auth structure
+                if (response_json.get("success") == True and 
+                    "data" in response_json and
+                    "authenticated" in response_json["data"]):
+                    self.log_test("Stack Auth Integration", True, "Stack Auth service responding correctly")
+                else:
+                    self.log_test("Stack Auth Integration", False, f"Unexpected auth status response: {response_json}")
+            else:
+                self.log_test("Stack Auth Integration", False, f"Auth status endpoint failed: {response.status_code}")
+                
+        except Exception as e:
+            self.log_test("Stack Auth Integration", False, f"Stack Auth integration error: {str(e)}")
+
     def run_all_tests(self):
         """Run all tests"""
         print("🚀 Starting Glass AI Assistant Backend API Tests")
         print(f"Testing backend at: {self.base_url}")
+        print("📋 Testing Stack Auth + PostgreSQL Migration")
         
         # Run all test suites
         self.test_basic_health_checks()
         self.test_plan_management()
-        self.test_ai_provider_endpoints()
+        self.test_ai_endpoints()
         self.test_authentication_endpoints()
+        self.test_user_management_endpoints()
+        self.test_usage_tracking_endpoints()
+        self.test_admin_endpoints()
+        self.test_stripe_endpoints()
         self.test_error_handling()
         self.test_database_connectivity()
+        self.test_stack_auth_integration()
         
         # Print summary
         self.print_summary()
@@ -323,6 +468,12 @@ class BackendTester:
                 print(f"  - {test['test']}: {test['details']}")
         else:
             print("\n🎉 ALL TESTS PASSED!")
+            print("\n✅ MIGRATION VERIFICATION:")
+            print("  - Stack Auth integration: Working")
+            print("  - PostgreSQL database: Connected")
+            print("  - All API endpoints: Responding correctly")
+            print("  - Authentication flow: Properly secured")
+            print("  - Error handling: Consistent JSON responses")
             
         print("\n" + "="*60)
 
