@@ -1,6 +1,6 @@
 const axios = require('axios');
 const neonAuthService = require('./neonAuthService');
-const config = require('../../config/environment');
+const config = require('../../../config/environment');
 
 class BackendApiService {
     constructor() {
