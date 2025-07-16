@@ -4,8 +4,17 @@ import { useState, useEffect } from 'react';
 import { Shield, Eye, EyeOff, Lock, Database, Trash2 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 
+interface PrivacySettings {
+  dataCollection: boolean;
+  analytics: boolean;
+  thirdPartySharing: boolean;
+  marketingEmails: boolean;
+  sessionRecording: boolean;
+  aiTraining: boolean;
+}
+
 export default function PrivacyPage() {
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<PrivacySettings>({
     dataCollection: true,
     analytics: true,
     thirdPartySharing: false,
@@ -16,7 +25,7 @@ export default function PrivacyPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const handleToggle = (setting: string) => {
+  const handleToggle = (setting: keyof PrivacySettings) => {
     setSettings(prev => ({ ...prev, [setting]: !prev[setting] }));
   };
 
