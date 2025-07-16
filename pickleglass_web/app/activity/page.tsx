@@ -3,17 +3,8 @@
 import { useState, useEffect } from 'react';
 import { MessageSquare, Search, Calendar, Filter, MoreHorizontal, Trash2, Edit } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { getSessions, deleteSession, getSessionDetails } from '@/utils/api';
+import { getSessions, deleteSession, getSessionDetails, Session } from '@/utils/api';
 import { useRouter } from 'next/navigation';
-
-interface Session {
-  id: string;
-  title?: string;
-  session_type?: string;
-  started_at?: string;
-  ended_at?: string;
-  is_active?: boolean;
-}
 
 export default function ActivityPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
