@@ -11,6 +11,7 @@ interface Plan {
   features: string[];
   limitations: string[];
   popular?: boolean;
+  icon: any;
 }
 
 export default function BillingPage() {
