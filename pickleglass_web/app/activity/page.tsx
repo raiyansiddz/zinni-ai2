@@ -29,7 +29,7 @@ export default function ActivityPage() {
   }, []);
 
   useEffect(() => {
-    const filtered = sessions.filter((session: any) =>
+    const filtered = sessions.filter((session: Session) =>
       session?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       session?.session_type?.toLowerCase().includes(searchQuery.toLowerCase())
     );
