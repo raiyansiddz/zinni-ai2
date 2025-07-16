@@ -1,4 +1,4 @@
-import { stackClientApp } from './stack-auth'
+import { useUser } from '@stackframe/stack'
 
 export interface UserProfile {
   uid: string;
@@ -125,22 +125,13 @@ export const onUserInfoChange = (listener: (userInfo: UserProfile | null) => voi
 };
 
 // API Headers with Authentication
-export const getApiHeaders = async (): Promise<HeadersInit> => {
+export const getApiHeaders = (): HeadersInit => {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
   
-  try {
-    // Try to get Stack Auth token
-    const user = await stackClientApp.getUser();
-    if (user && user.accessToken) {
-      headers['Authorization'] = `Bearer ${user.accessToken}`;
-    }
-  } catch (error) {
-    console.warn('Failed to get Stack Auth token:', error);
-  }
-  
-  // Fallback to user ID header for local mode
+  // For Stack Auth, we'll handle tokens in the components that call the API
+  // For now, use the fallback user ID header for local mode
   const userInfo = getUserInfo();
   if (userInfo?.uid) {
     headers['X-User-ID'] = userInfo.uid;
@@ -159,7 +150,7 @@ export const apiCall = async (path: string, options: RequestInit = {}) => {
     method: options.method || 'GET'
   });
   
-  const headers = await getApiHeaders();
+  const headers = getApiHeaders();
   
   const defaultOpts: RequestInit = {
     headers: {
@@ -181,12 +172,16 @@ export const apiCall = async (path: string, options: RequestInit = {}) => {
 
 // Authentication APIs
 export const findOrCreateUser = async (user: UserProfile): Promise<UserProfile> => {
-  const response = await apiCall('/api/auth/me', {
-    method: 'GET',
-  });
-  
-  if (response.ok) {
-    return response.json();
+  try {
+    const response = await apiCall('/api/auth/me', {
+      method: 'GET',
+    });
+    
+    if (response.ok) {
+      return response.json();
+    }
+  } catch (error) {
+    console.log('User not found, creating new user');
   }
   
   // If user doesn't exist, create them
@@ -319,12 +314,7 @@ export const getBatchData = async (includes: ('profile' | 'presets' | 'sessions'
 
 // Logout
 export const logout = async () => {
-  try {
-    await stackClientApp.signOut();
-  } catch (error) {
-    console.error('Stack Auth logout failed:', error);
-  }
-  
+  // Stack Auth logout will be handled in the components
   setUserInfo(null);
   
   // Clear local storage
