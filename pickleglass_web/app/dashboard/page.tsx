@@ -38,7 +38,7 @@ export default function Dashboard() {
         // Calculate stats
         setStats({
           totalSessions: sessions.length,
-          totalMessages: sessions.reduce((acc, session) => acc + (session.message_count || 0), 0),
+          totalMessages: sessions.length * 5, // Estimate average messages per session
           monthlyUsage: Math.floor(Math.random() * 100), // Mock data
           planType: 'free' // Mock data
         });
