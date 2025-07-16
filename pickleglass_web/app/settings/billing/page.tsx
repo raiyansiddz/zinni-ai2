@@ -98,7 +98,7 @@ export default function BillingPage() {
     }
   };
 
-  const PlanCard = ({ plan, isCurrentPlan }) => (
+  const PlanCard = ({ plan, isCurrentPlan }: { plan: Plan; isCurrentPlan: boolean }) => (
     <div className={`bg-white rounded-xl shadow-sm border p-6 relative ${
       plan.popular ? 'ring-2 ring-blue-500' : ''
     } ${isCurrentPlan ? 'ring-2 ring-green-500' : ''}`}>
