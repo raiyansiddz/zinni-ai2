@@ -413,7 +413,7 @@ class ModelStateService extends EventEmitter {
     }
 
     async areProvidersConfigured() {
-        if (this.isLoggedInWithFirebase()) return true;
+        if (this.isLoggedInWithNeon()) return true;
         const allSettings = await providerSettingsRepository.getAll();
         const apiKeyMap = {};
         allSettings.forEach(s => apiKeyMap[s.provider] = s.api_key);
