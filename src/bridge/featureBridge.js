@@ -43,7 +43,7 @@ module.exports = {
     ipcMain.handle('mark-keychain-completed', async () => await permissionService.markKeychainCompleted());
     ipcMain.handle('check-keychain-completed', async () => await permissionService.checkKeychainCompleted());
     ipcMain.handle('initialize-encryption-key', async () => {
-        const userId = neonAuthService.getCurrentUserId();
+        const userId = authService.getCurrentUserId();
         await encryptionService.initializeKey(userId);
         return { success: true };
     });
