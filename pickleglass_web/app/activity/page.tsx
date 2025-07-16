@@ -20,9 +20,9 @@ export default function ActivityPage() {
   }, []);
 
   useEffect(() => {
-    const filtered = sessions.filter(session =>
-      session.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      session.session_type?.toLowerCase().includes(searchQuery.toLowerCase())
+    const filtered = sessions.filter((session: any) =>
+      session?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      session?.session_type?.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredSessions(filtered);
   }, [sessions, searchQuery]);
