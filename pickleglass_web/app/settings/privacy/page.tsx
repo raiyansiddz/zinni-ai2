@@ -61,7 +61,7 @@ export default function PrivacyPage() {
     }
   };
 
-  const ToggleSwitch = ({ enabled, onToggle }) => (
+  const ToggleSwitch = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
     <button
       onClick={onToggle}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
