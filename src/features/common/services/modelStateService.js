@@ -166,8 +166,8 @@ class ModelStateService extends EventEmitter {
         }
     }
     
-    async setFirebaseVirtualKey(virtualKey) {
-        console.log(`[ModelStateService] Setting Firebase virtual key.`);
+    async setNeonAuthVirtualKey(virtualKey) {
+        console.log(`[ModelStateService] Setting Neon Auth virtual key.`);
 
         // 키를 설정하기 전에, 이전에 openai-glass 키가 있었는지 확인합니다.
         const previousSettings = await providerSettingsRepository.getByProvider('openai-glass');
