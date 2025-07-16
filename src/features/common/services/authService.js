@@ -173,30 +173,53 @@ class AuthService {
     }
 
     getCurrentUser() {
-        const isLoggedIn = !!(this.currentUserMode === 'firebase' && this.currentUser);
+        const isLoggedIn = !!(this.currentUserMode === 'neon' && this.currentUser);
 
         if (isLoggedIn) {
             return {
                 uid: this.currentUser.uid,
                 email: this.currentUser.email,
                 displayName: this.currentUser.displayName,
-                mode: 'firebase',
+                photoURL: this.currentUser.photoURL,
+                mode: 'neon',
                 isLoggedIn: true,
-                //////// before_modelStateService ////////
-                // hasApiKey: this.hasApiKey // Always true for firebase users, but good practice
-                //////// before_modelStateService ////////
+                role: this.currentUser.role,
+                currentPlan: this.currentUser.currentPlan
             };
         }
         return {
             uid: this.currentUserId, // returns 'default_user'
-            email: 'contact@pickle.com',
+            email: 'contact@glass.dev',
             displayName: 'Default User',
             mode: 'local',
             isLoggedIn: false,
-            //////// before_modelStateService ////////
-            // hasApiKey: this.hasApiKey
-            //////// before_modelStateService ////////
         };
+    }
+
+    // Compatibility methods for existing code
+    async startFirebaseAuthFlow() {
+        // Redirect Firebase auth calls to Neon Auth
+        return await this.startNeonAuthFlow();
+    }
+
+    async signInWithCustomToken(token) {
+        // This method is deprecated - redirect to Neon Auth
+        console.warn('[AuthService] signInWithCustomToken is deprecated. Use Neon Auth instead.');
+        throw new Error('Firebase custom token authentication is no longer supported. Please use Neon Auth.');
+    }
+
+    // Helper method to get auth token for backend requests
+    getAuthToken() {
+        return neonAuthService.getAuthToken();
+    }
+
+    isAuthenticated() {
+        return neonAuthService.isAuthenticated();
+    }
+
+    // Helper method to make authenticated requests to backend
+    async makeAuthenticatedRequest(endpoint, options = {}) {
+        return await neonAuthService.makeAuthenticatedRequest(endpoint, options);
     }
 }
 
