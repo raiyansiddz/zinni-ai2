@@ -28,7 +28,11 @@ export default function SettingsPage() {
   const loadProfile = async () => {
     try {
       const data = await getUserProfile();
-      setProfile(data);
+      setProfile({
+        display_name: data.display_name,
+        email: data.email,
+        photo_url: data.photo_url || ''
+      });
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
